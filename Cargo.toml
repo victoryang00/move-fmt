@@ -1,0 +1,19 @@
+cargo-features = ["edition2021"]
+[package]
+name = "move_fmt"
+version = "0.1.4"
+authors = ["victoryang00 <yangyw@shanghaitech.edu.cn>"]
+edition = "2021"
+description = "A formatter tool for move language"
+repository = "https://github.com/victoryang00/move-fmt"
+license = "MPL-2.0"
+
+[dependencies]
+pest = "2.1"
+text-utils = "0.3.0"
+walkdir = "2.3"
+toml = "0.5"
+
+[dev-dependencies]
+pest_generator = "2.1"
+quote = "1.0"

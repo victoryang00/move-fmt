@@ -1,0 +1,30 @@
+// move grammar
+// Copyright (c) 2021 Yiwei Yang
+//
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
+
+grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
+
+// Identifiers
+alpha={ 'a'..'z' | 'A'..'Z' }
+digit={ '0'..'9' }
+ident = { (alpha|digit|"$"|"_") ~ (alpha|digit|"$"|"_")*}
+field_name = {idnet}
+procedure_name = {ident}
+module_name = {ident}
+struct_name = {ident}
+var = {ident}
+
+modifier ={"modifier"}
+type = {base_type,immutaable}
+// Types
+kind = {"R"|"V"}
+ground_type = {"bool"|"u8"|"u32"|"u64"|"u128"|"address"|"bytearray"}
+module_alias = {module_name|"Self"}
+base_type = {ground_type|kind~"#"~module_alias~"."~struct_name }
+type = {base_type}
+field_name
