@@ -48,27 +48,27 @@ bytes = {"b\""~(alpha|digit)*~"\""}
 value = {"true"|"false"|address|bytes|unsigned}
 
 // Expression
-value_operator = {"copy"~"("~var~")" | "move("~var~")"}
+value_operator = {"copy"~"("~var~")" | "move"~"("~var~")"}
 reference_operator = {"&"~var|"&"~exp~"."~field_name|"*"~exp}
 expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
-exp = {expx~"||"~expx|expx~"&&"~expx|expx~">="~expx|expx~"<="~expx|expx~">"~expx|expx~"<"~expx|expx~"+"~expx|expx~"-"~expx|expx~"*"~expx|expx~"/"~expx|expx~"*"~expx|expx~"%"~expx|expx~"^"~expx|expx~"|"~expx|expx~"&"~expx|expx~"=="~expx|expx~"!="~expx}
+exp = {expx~"||"~expx|expx~"&&"~expx|expx~">="~expx|expx~"<="~expx|expx~">"~expx|expx~"<"~expx|expx~"+"~expx|expx~"-"~expx|expx~"*"~expx|expx~"/"~expx|expx~"*"~expx|expx~"%"~expx|expx~"^"~expx|expx~"|"~expx|expx~"&"~expx|expx~"=="~expx|expx~"!="~expx|expx}
 
 // Commands
 module_operator = {"move_from<"~struct_name~">("~exp~")"|"borrow_global<"~struct_name~">("~exp~")"|"exist<"~struct_name~">("~exp~")"}
 builtin = {"create_account("~exp~")"|"release("~exp~")"|"freeze("~exp~")"}
-call = {module_operator|builtin|module_alias~"."~procedure_name~"("~(exp~",") *~exp~")"}
-cmd = {var~"="~exp|var*~"="~call|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~(exp~",")*~exp|struct_name ~"{"~(field_name~":"~var~",")*~field_name~":"~var ~"}"~"="~exp}
+call = {module_operator|builtin|module_alias~"."~procedure_name~"("~((exp~",") *~exp)?~")"}
+cmd = {var~"="~exp|var*~"="~call|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~"="~exp}
 stmtx = {stmt~stmt}
-stmt = {"if"~"( "~exp~")"~"{ " ~stmt~ "}"~"else"~"{"~stmt~"}"|"if"~"("~exp~")"~"{"~stmt~"}"|"while"~"("~exp~")"~"{"~stmt~"}" |"loop"~"{"~stmt~"}"| cmd~";"}
+stmt = {"if"~"("~exp~")"~"{" ~stmt~ "}"~"else"~"{"~stmt~"}"|"if"~"("~exp~")"~"{"~stmt~"}"|"while"~"("~exp~")"~"{"~stmt~"}" |"loop"~"{"~stmt~"}"| cmd~";"}
 
 // Imports
-import_decl = {"import"~address~"."~module_name~"as"~module_name~";"|"import "~address~"."~module_name~";"}
+import_decl = {"import"~address~"."~module_name~"as"~module_name~";"|"import"~address~"."~module_name~";"}
 
 // Modules
-struct_decl = {"resourse"~struct_name~"{ " ~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"|"struct"~struct_name~"{ "~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"}
+struct_decl = {"resourse"~struct_name~"{" ~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"|"struct"~struct_name~"{"~((field_name~":"~base_type~",")*~field_name~":"~base_type)?~"}"}
 procedure_body = {("let"~var~(":"~ground_type)?~";")*~stmtx}
-procedure_decl = {"public"?~procedure_name~"(" ~(var~":"~type_~",")*~var~":"~type_~"):"~tau_list~"{" ~procedure_body~"}" |"native "~"public"? ~procedure_name~"(" ~(var~":"~type_~",")*~var~":"~type_~"):"~tau_list~";"}
+procedure_decl = {"public"?~procedure_name~"(" ~((var~":"~type_~",")*~var~":"~type_)?~")"~":"~tau_list~"{" ~procedure_body~"}" |"native"~"public"? ~procedure_name~"(" ~((var~":"~type_~",")*~var~":"~type_)?~")"~":"~tau_list~";"}
 module_decl = {"module"~module_name~"{"~import_decl*~struct_decl*~procedure_decl*~"}"}
 
 // Transaction Scripts
-transaction_script = {import_decl*~" public main( "~(var~":"~ground_type~",")*~var~":"~ground_type~")"}
+transaction_script = {import_decl*~"public"~"main"~"("~((var~":"~ground_type~",")*~var~":"~ground_type)?~")"}
