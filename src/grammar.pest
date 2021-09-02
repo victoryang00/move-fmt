@@ -9,22 +9,57 @@
 
 grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
+WHITESPACE = _{ " "? }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
 // Identifiers
 alpha={ 'a'..'z' | 'A'..'Z' }
 digit={ '0'..'9' }
 ident = { (alpha|digit|"$"|"_") ~ (alpha|digit|"$"|"_")*}
-field_name = {idnet}
+field_name = {ident}
 procedure_name = {ident}
 module_name = {ident}
 struct_name = {ident}
 var = {ident}
 
-modifier ={"modifier"}
-type = {base_type,immutaable}
 // Types
 kind = {"R"|"V"}
 ground_type = {"bool"|"u8"|"u32"|"u64"|"u128"|"address"|"bytearray"}
 module_alias = {module_name|"Self"}
 base_type = {ground_type|kind~"#"~module_alias~"."~struct_name }
-type = {base_type}
-field_name
+type_ = {base_type|"&"~base_type|"&mut"~base_type}
+tau_list = {"unit"| (type_) *}
+
+// Values
+unsigned = {digit*}
+address = {"0x"~digit*}
+bytes = {"b\""~(alpha|digit)*~"\""}
+value = {"true"|"false"|address|bytes|unsigned}
+
+// Expression
+value_operator = {"copy"~"("~var~")" | "move("~var~")"}
+reference_operator = {"&"~var|"&"~exp~"."~field_name|"*"~exp}
+expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
+exp = {expx~"||"~expx|expx~"&&"~expx|expx~">="~expx|expx~"<="~expx|expx~">"~expx|expx~"<"~expx|expx~"+"~expx|expx~"-"~expx|expx~"*"~expx|expx~"/"~expx|expx~"*"~expx|expx~"%"~expx|expx~"^"~expx|expx~"|"~expx|expx~"&"~expx|expx~"=="~expx|expx~"!="~expx}
+
+// Commands
+module_operator = {"move_from"~"<"~struct_name~">"~"("~exp~")"|"borrow_global"~"<"~struct_name~">("~exp~")"|"exist<"~struct_name~">"~"("~exp~")"}
+builtin = {"create_account"~"("~exp~")"|"release"~"("~exp~")"|"freeze"~"("~exp~")"}
+call = {module_operator|builtin|module_alias~"."~procedure_name~"("~(exp~",") *~exp~")"}
+cmd = {var~"="~exp|var*~"="~call|call|"*"~var~"="~exp|"assert("~exp~","~exp~")"|"break"|"continue"|"return"~(exp~",")*~exp|struct_name ~"{"~(field_name~":"~var~",")*~field_name~":"~var ~"}"~"="~exp}
+
+// Statements
+stmtx = {stmt~stmt}
+stmt = {"if"~"( "~exp~")"~"{ " ~stmt~ "}"~"else"~"{"~stmt~"}"|"if"~"("~exp~")"~"{"~stmt~"}"|"while"~"("~exp~")"~"{"~stmt~"}" |"loop"~"{"~stmt~"}"| cmd}
+
+// Imports
+import_decl = {"import"~address~"."~module_name~"as"~module_name~";"|"import "~address~"."~module_name~";"}
+
+// Modules
+struct_decl = {"resourse"~struct_name~"{ " ~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"|"struct"~struct_name~"{ "~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"}
+procedure_body = {("let "~var~";")*~stmtx}
+procedure_decl = {"public"?~procedure_name~"(" ~(var~":"~type_~",")*~var~":"~type_~"):"~tau_list~"{" ~procedure_body~"}" |"native "~"public"? ~procedure_name~"(" ~(var~":"~type_~",")*~var~":"~type_~"):"~tau_list~";"}
+module_decl = {"module"~module_name~"{"~import_decl*~struct_decl*~procedure_decl*~"}"}
+
+// Transaction Scripts
+transaction_script = {import_decl*~"public"~"main"~"("~(var~":"~ground_type~",")*~var~":"~ground_type~")"}
