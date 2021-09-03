@@ -12,7 +12,7 @@ module M {
 
         h = 0;
         y = 0;
-            salt = DiemTimestamp::now_microseconds();
+        salt = DiemTimestamp::now_microseconds();
 
         if (blockHash == 1){
             y = salt * 15 / (salt % 5);

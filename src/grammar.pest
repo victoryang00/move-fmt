@@ -54,8 +54,8 @@ value_operator = {"copy"~"("~var~")" | "move"~"("~var~")"}
 reference_operator = {"&"~var|"&"~exp~"."~field_name|"*"~exp}
 
 // Commands
-module_operator = {"move_from<"~struct_name~">("~exp~")"|"borrow_global<"~struct_name~">("~exp~")"|"exist"~"<"~struct_name~">"~"("~exp~")"}
-builtin = {"create_account("~exp~")"|"release("~exp~")"|"freeze("~exp~")"}
+module_operator = {"move_from"~"<"~struct_name~">"~"("~exp~")"|"borrow_global"~"<"~struct_name~">"~"("~exp~")"|"exist"~"<"~struct_name~">"~"("~exp~")"}
+builtin = {"create_account"~"("~exp~")"|"release"~"("~exp~")"|"freeze"~"("~exp~")"}
 call = {module_operator|builtin|module_alias~"."~procedure_name~"("~((exp~",") *~exp)?~")"}
 cmd = {var~"="~call|var*~"="~exp|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~"="~exp}
 stmtx = {stmt~stmtx|stmt}

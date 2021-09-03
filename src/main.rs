@@ -12,7 +12,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                 if let Some(value) = pest.get("exclude") {
                     exclude = toml_string_or_string_list(value)
                 }
-                // TODO: use macros
                 if let Some(value) = pest.get("choice_first") {
                     if let Some(b) = value.as_bool() {
                         cfg.choice_first = b
@@ -31,7 +30,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-    // TODO: remove exclude
     println!("Excluded: {:?}", exclude);
     for entry in WalkDir::new(".").follow_links(true).into_iter().filter_map(|e| e.ok()) {
         let f_name = entry.file_name().to_string_lossy();
@@ -55,6 +53,5 @@ fn toml_string_or_string_list(value: &Value) -> Vec<String> {
         }
         _ => (),
     }
-    // TODO: delete dup
     return out;
 }

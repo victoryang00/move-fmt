@@ -49,8 +49,7 @@ impl Settings {
             let (s, e) = i.lines;
             if last + 1 == s {
                 group.push(i)
-            }
-            else {
+            } else {
                 if group.len() != 0 {
                     groups.push(group);
                 }
@@ -83,149 +82,16 @@ impl Settings {
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
-                Rule::assignment_operator => continue,
-                Rule::opening_brace => continue,
-                Rule::closing_brace => continue,
-                Rule::identifier => identifier = pair.as_str().to_string(),
-                Rule::silent_modifier => modifier = pair.as_str().to_string(),
-                Rule::atomic_modifier => modifier = pair.as_str().to_string(),
-                Rule::non_atomic_modifier => modifier = pair.as_str().to_string(),
-                Rule::compound_atomic_modifier => modifier = pair.as_str().to_string(),
-                Rule::expression => match self.format_expression(pair) {
-                    Ok(s) => {
-                        if start == end {
-                            code = format!("{{{}}}", s.join("|"));
-                        }
-                        else if self.choice_first {
-                            code = format!("{{\n  {}}}", indent(&s.join("\n| "), self.indent - 2));
-                        }
-                        else {
-                            code = format!("{{\n{}}}", indent(&s.join(" |\n"), self.indent));
-                        }
-                    }
-                    Err(e) => return Err(e),
-                },
-                _ => (),
+                Rule::module_decl => format_module_decl(pair),
+                Rule::transaction_script => continue,
+                Rule::move_script => continue,
+                _ => Ok("".to_string()),
             };
         }
         return Ok(GrammarRule { is_comment: false, identifier, modifier, code, lines: (start, end) });
     }
-    fn format_expression(&self, pairs: Pair<Rule>) -> PestResult<Vec<String>> {
-        let mut code = vec![];
-        let mut term = String::new();
-        for pair in pairs.into_inner() {
-            match pair.as_rule() {
-                Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push(format_comment(pair)),
-                Rule::choice_operator => {
-                    code.push(term.clone());
-                    term = String::new()
-                }
-                Rule::sequence_operator => {
-                    let joiner = format!("{0}~{0}", " ".repeat(self.sequence_space));
-                    term.push_str(&joiner)
-                }
-                Rule::term => match self.format_term(pair) {
-                    Ok(string) => term.push_str(&string),
-                    Err(e) => return Err(e),
-                },
-                _ => return Err(Unreachable(unreachable_rule!())),
-            };
-        }
-        code.push(term.clone());
-        return Ok(code);
-    }
-
-    fn format_term(&self, pairs: Pair<Rule>) -> PestResult<String> {
-        let mut code = String::new();
-        for pair in pairs.into_inner() {
-            match pair.as_rule() {
-                Rule::WHITESPACE => continue,
-                Rule::COMMENT => code.push_str(&format_comment(pair)),
-                Rule::negative_predicate_operator => code.push_str(pair.as_str()),
-                Rule::positive_predicate_operator => code.push_str(pair.as_str()),
-                Rule::repeat_once_operator => code.push_str(pair.as_str()),
-                Rule::optional_operator => code.push_str(pair.as_str()),
-                Rule::repeat_operator => code.push_str(pair.as_str()),
-                Rule::opening_paren => code.push_str(pair.as_str()),
-                Rule::closing_paren => code.push_str(pair.as_str()),
-                Rule::identifier => code.push_str(pair.as_str()),
-                Rule::string => code.push_str(pair.as_str()),
-                Rule::insensitive_string => {
-                    code.push('^');
-                    for inner in pair.into_inner() {
-                        match inner.as_rule() {
-                            Rule::WHITESPACE => continue,
-                            Rule::string => code.push_str(inner.as_str()),
-                            _ => return Err(Unreachable(unreachable_rule!())),
-                        }
-                    }
-                }
-                Rule::range => code.push_str(pair.as_str()),
-                Rule::expression => {
-                    let e = self.format_expression(pair);
-                    match e {
-                        Ok(expression) => {
-                            let joiner = format!("{0}|{0}", " ".repeat(self.choice_space));
-                            code.push_str(&expression.join(&joiner))
-                        }
-                        Err(e) => return Err(e),
-                    }
-                }
-                Rule::_push => match self.format_term(pair) {
-                    Ok(string) => code.push_str(&string),
-                    Err(e) => return Err(e),
-                },
-                Rule::repeat_min => code.push_str(&format_repeat_min_max(pair)?),
-                Rule::repeat_exact => code.push_str(&format_repeat_min_max(pair)?),
-                Rule::repeat_min_max => code.push_str(&format_repeat_min_max(pair)?),
-                _ => return Err(Unreachable(unreachable_rule!())),
-            };
-        }
-        return Ok(code);
-    }
 }
 
-fn format_comment(pairs: Pair<Rule>) -> String {
-    let mut code = String::new();
-    let raw = pairs.as_str();
-    if raw.starts_with("//") {
-        code.push_str("//");
-        code.push_str(raw[2..raw.len()].trim());
-        code.push('\n')
-    }
-    else {
-        // block comment
-        unimplemented!()
-    }
-    return code;
-}
-
-#[allow(dead_code)]
-fn format_repeat_exact(pairs: Pair<Rule>) -> String {
-    let mut code = String::new();
-    for pair in pairs.into_inner() {
-        match pair.as_rule() {
-            Rule::opening_brace => code.push_str(pair.as_str()),
-            Rule::closing_brace => code.push_str(pair.as_str()),
-            Rule::number => code.push_str(pair.as_str()),
-            _ => unreachable!(),
-        };
-    }
-    return code;
-}
-
-fn format_repeat_min_max(pairs: Pair<Rule>) -> PestResult<String> {
-    let mut code = String::new();
-    for pair in pairs.into_inner() {
-        match pair.as_rule() {
-            Rule::WHITESPACE => continue,
-            Rule::opening_brace => code.push_str(pair.as_str()),
-            Rule::closing_brace => code.push_str(pair.as_str()),
-            Rule::comma => code.push_str(", "),
-            Rule::number => code.push_str(pair.as_str()),
-            _ => return Err(Unreachable(unreachable_rule!())),
-        };
-    }
-    return Ok(code);
+fn format_module_decl( pairs: Pair<Rule>) -> PestResult<String> {
+    unimplemented!()
 }
