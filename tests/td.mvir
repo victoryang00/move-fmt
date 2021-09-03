@@ -16,7 +16,7 @@ module Test{
             seed = 15 / 3;
             seed = move(seed) + (move(salt) * 300);
             seed = move(seed) + move(y);
-        };
+        }
 
         if (copy(blockHash) == 2){
             salt = DiemTimestamp.now_microseconds();

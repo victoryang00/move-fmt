@@ -9,7 +9,8 @@
 
 grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
 
-grammar_rule = {(module_decl)*|(transaction_script)*|(move_script)*}
+grammar_rule = {module_decl|transaction_script|move_script}
+
 
 line_terminator = _{ "\u{000A}" | "\u{000D}" | "\u{2028}" | "\u{2029}" }
 WHITESPACE = _{
@@ -22,10 +23,10 @@ WHITESPACE = _{
   SPACE_SEPARATOR |
   line_terminator
 }
-COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//"~ANY* }
 
-alpha={ 'a'..'z' | 'A'..'Z' }
-digit={ '0'..'9' }
+alpha={ "a".."z" | "A".."Z" }
+digit={ "0".."9" }
 ident = { (alpha|digit|"$"|"_") ~ (alpha|digit|"$"|"_")*}
 field_name = {ident}
 procedure_name = {ident}
@@ -50,16 +51,16 @@ value = {"true"|"false"|address|bytes|unsigned}
 // Expression
 value_operator = {"copy"~"("~var~")" | "move"~"("~var~")"}
 reference_operator = {"&"~var|"&"~exp~"."~field_name|"*"~exp}
-expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
-exp = {expx~"||"~expx|expx~"&&"~expx|expx~">="~expx|expx~"<="~expx|expx~">"~expx|expx~"<"~expx|expx~"+"~expx|expx~"-"~expx|expx~"*"~expx|expx~"/"~expx|expx~"*"~expx|expx~"%"~expx|expx~"^"~expx|expx~"|"~expx|expx~"&"~expx|expx~"=="~expx|expx~"!="~expx|expx}
 
 // Commands
-module_operator = {"move_from<"~struct_name~">("~exp~")"|"borrow_global<"~struct_name~">("~exp~")"|"exist<"~struct_name~">("~exp~")"}
+module_operator = {"move_from<"~struct_name~">("~exp~")"|"borrow_global<"~struct_name~">("~exp~")"|"exist"~"<"~struct_name~">"~"("~exp~")"}
 builtin = {"create_account("~exp~")"|"release("~exp~")"|"freeze("~exp~")"}
 call = {module_operator|builtin|module_alias~"."~procedure_name~"("~((exp~",") *~exp)?~")"}
-cmd = {var~"="~exp|var*~"="~call|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~"="~exp}
-stmtx = {stmt~stmt}
-stmt = {"if"~"("~exp~")"~"{" ~stmt~ "}"~"else"~"{"~stmt~"}"|"if"~"("~exp~")"~"{"~stmt~"}"|"while"~"("~exp~")"~"{"~stmt~"}" |"loop"~"{"~stmt~"}"| cmd~";"}
+cmd = {var~"="~call|var*~"="~exp|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~"="~exp}
+stmtx = {stmt~stmtx|stmt}
+stmt = {"if"~"("~exp~")"~"{" ~stmtx~ "}"~"else"~"{"~stmtx~"}"|"if"~"("~exp~")"~"{"~stmtx~"}"|"while"~"("~exp~")"~"{"~stmtx~"}" |"loop"~"{"~stmtx~"}"| cmd~";"}
+expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
+exp = {expx~"||"~exp|expx~"&&"~exp|expx~">="~exp|expx~"<="~exp|expx~">"~exp|expx~"<"~exp|expx~"+"~exp|expx~"-"~exp|expx~"*"~exp|expx~"/"~exp|expx~"*"~exp|expx~"%"~exp|expx~"^"~exp|expx~"|"~exp|expx~"&"~exp|expx~"=="~exp|expx~"!="~exp|"("~exp~")"~exp|"("~exp~")"|expx}
 
 // Imports
 import_decl = {"import"~address~"."~module_name~"as"~module_name~";"|"import"~address~"."~module_name~";"}
@@ -72,3 +73,1144 @@ module_decl = {"module"~module_name~"{"~import_decl*~struct_decl*~procedure_decl
 
 // Transaction Scripts
 transaction_script = {import_decl*~"public"~"main"~"("~((var~":"~ground_type~",")*~var~":"~ground_type)?~")"}
+
+move_script = {}
+// tokens
+SENDER_ADDRESS_LITERAL="{{sender}}"
+ADDRESS_LITERAL="0x"~("0".."9"|a-f|A-F|)
+BECH32_ADDRESS_LITERAL="regexp:wallet1[A-Z0-9a-z&&[^boi1]]{6,}"
+POLKADOT_ADDRESS_LITERAL="regexp:[1-9A-HJ-NP-Za-km-z]{40}[1-9A-HJ-NP-Za-km-z]*"
+
+//         BOOL_LITERAL="regexp:(true)|(false)"
+//         INTEGER_LITERAL="regexp:[0-9]+((u8)|(u64)|(u128))?"
+//         HEX_STRING_LITERAL="regexp:x\"([A-F0-9a-f]*)\""
+//         BYTE_STRING_LITERAL="regexp:b"(.*)""
+
+//         ident="regexp:[_a-zA-Z][_a-zA-Z0-9]*"
+// //        FUNCTION_PATTERN_NAME="regexp:[*_a-zA-Z][*_a-zzA-Z0-9]*"
+
+//         L_BRACE          =  "{"
+//         R_BRACE          =  "}"
+//         L_BRACK          =  "["
+//         R_BRACK          =  "]"
+//         L_PAREN          =  "("
+//         R_PAREN          =  ")"
+//         COLON_COLON      =  "::"
+//         COLON           =  ":"
+//         SEMICOLON   =  ";"
+//         COMMA       =  ","
+//         LT            =  "<"
+//         GT         =  ">"
+//         AND = "&"
+//         OR = "|"
+//         EQ_EQ = "=="
+//         NOT_EQ = "!="
+//         EQ = "="
+//         DOT         =  "."
+
+//         EXCL        =  "!"
+// //        PLUSEQ      =  "+="
+//         PLUS        =  "+"
+// //        MINUSEQ     =  "-="
+//         MINUS       =  "-"
+// //        OREQ        =  "|="
+// //        ANDAND      =  "&&"
+// //        ANDEQ       =  "&="
+// //        AND         =  "&"
+// //        OR          =  "|"
+// //        LT          =  "<"
+// //        XOREQ       =  "^="
+//         XOR         =  "^"
+// //        MULEQ       =  "*="
+//         MUL         =  "*"
+// //        DIVEQ       =  "/="
+//         DIV         =  "/"
+// //        REMEQ       =  "%="
+//         MODULO         =  "%"
+
+//         // Contextual tokens
+//         LT_EQ           = "<="
+//         LT_LT           = "<<"
+//         GT_EQ           = ">="
+//         GT_GT           = ">>"
+//         OR_OR           = "||"
+//         AND_AND         = "&&"
+//         EQ_EQ_GT        = "==>"
+//         LT_EQ_EQ_GT     = "<==>"
+
+// // Naming convention:
+// //
+// //   * tokens are lowercase: for, if, identifier
+// //   * rules are PascalCase: StructItem, EnuMoveariant
+// //   * recovery related rules are PascalCase_with_snake_suffix: Item_recover
+File = {(ScriptDef | AddressDef | ModuleDef)*}
+
+ScriptDef = {"script"~ScriptBlock} 
+// { 
+//     pin = 1
+//     implements = [ "org.move.lang.core.psi.MoveImportStatementsOwner" ]
+//     mixin = "org.move.lang.core.psi.ext.MoveScriptDefMixin"
+// }
+ScriptBlock = {"{"~ScriptBlockItems~"}"}
+ScriptBlockItems = {ScriptItem*}
+
+ScriptItem = {!("}"| EOI)~ScriptItem_item}
+// {
+//     pin = 1
+//     recoverWhile = ScriptItem_recover
+// }
+// // top-level recovery
+ScriptItemFirst = {"use" | "const" | "fun"}
+ScriptItem_recover = {!("}" | EOI | ScriptItemFirst)}
+
+ScriptItem_item = {ImportStatement | ConstDef | FunctionDef}
+
+AddressDef ={ "address"~AddressRef~AddressBlock }
+//     pin = 1
+//     mixin = "org.move.lang.core.psi.ext.MoveAddressDefMixin"
+// //    stubClass = "org.move.lang.core.stubs.impl.MoveAddressDefStub"
+// //    elementTypeFactory = "org.move.lang.core.stubs.StubImplFactoryKt.factory"
+// }
+AddressBlock = {"{"~AddressBlockItems~"}" }
+AddressBlockItems = {ModuleDef*}
+// {
+//     recoverWhile = AddressBlockItems_recover
+// }
+AddressBlockItems_recover = {!"}"}
+
+ModuleDef = {"module"~ident~ModuleBlock}
+// {
+//     pin = 1
+//     name = "module declaration"
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.psi.MoveImportStatementsOwner"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveModuleDefMixin"
+// //    stubClass = "org.move.lang.core.stubs.impl.MoveModuleDefStub"
+// //    elementTypeFactory = "org.move.lang.core.stubs.StubImplFactoryKt.factory"
+// }
+ModuleBlock = {"{"~ModuleBlockItems~"}"}
+// {
+//     pin = 1
+// }
+ModuleBlockItems = {ModuleItem*}
+// //{
+// //    recoverWhile = "ModuleBlockItems_recover"
+// //}
+// //private ModuleBlockItems_recover = !"}"
+
+// private ModuleItem = !("}" | EOI) ModuleItem_item
+// {
+//     pin = 1
+//     recoverWhile = Item_recover
+// }
+// // top-level recovery
+Item_first = {"use" | "public" | "native" | "fun" | "const" | "struct" | "spec"}
+Item_recover = {!("}" | Item_first)}
+
+ModuleItem_item = {ImportStatement | FriendStatement
+                            | StructDef | FunctionDef
+                            | NativeStructDef | NativeFunctionDef
+                            | ConstDef
+                            | SpecDef}
+ ModuleItem_item = {ImportStatement | StructDef | NativeStructDef
+                          | NativeFunctionDef | ConstDef | ItemSpecDef
+                           | FunctionDef | FunctionVisibilityContainer}
+
+ConstDef = {"const"~ident~TypeAnnotation~Initializer~";"}
+// {
+//     pin = 1
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.types.HasType"
+//     ]
+//     mixin = "org.move.lang.core.psi.mixins.MoveConstDefMixin"
+// //    recoverWhile = ModuleItem_recover
+// }
+// //private ConstDef_init = "=" Expr
+// //{
+// //    recoverWhile = "ConstDef_init_recover"
+// //}
+// //private ConstDef_init_recover = !";"
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+/// //NativeFunctionDef = native FunctionSignature
+
+// //NativeFunctionDef = native FunctionVisibilityModifier?
+// //                      fun ident TypeParameterList?
+// //                         FunctionParameterList
+// //                         ReturnType?
+// //                         AcquiresType? ";"
+// //{
+// //    pin = "fun"
+// //    name = "native function"
+// //    implements = [
+// //        "org.move.lang.core.psi.MoveNameIdentifierOwner"
+// ////        "org.move.lang.core.psi.MoveTypeParametersOwner"
+// //        "org.move.lang.core.psi.MoveFunctionSignatureOwner"
+// //    ]
+// //    mixin = "org.move.lang.core.psi.mixins.MoveNativeFunctionDefMixin"
+// //    recoverWhile = Item_recover
+// //}
+
+// //private NativeDef =
+// //{
+// //    pin = 1
+// ////    recoverWhile = Item_recover
+// //}
+
+// NativeFunctionDef = native FunctionSignatureWithOptionalVisibility ";" { pin = 2 }
+// NativeStructDef = native StructSignature ";" { pin = 2 }
+
+// private FunctionSignatureWithOptionalVisibility = FunctionSignatureVisibility | FunctionSignature
+// private FunctionSignatureVisibility = FunctionVisibilityModifier FunctionSignature { pin = 1 }
+// FunctionSignature = fun ident TypeParameterList?
+//                           FunctionParameterList
+//                           ReturnType? AcquiresType?
+// {
+//     pin = "fun"
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.psi.MoveFunctionSignatureOwner"
+//     ]
+//     mixin = "org.move.lang.core.psi.mixins.MoveFunctionSignatureMixin"
+//     recoverWhile = "FunctionSignature__recover"
+// }
+// private FunctionSignature__recover = !("{" | "}" | ";" | EOI | Item_first)
+
+// FunctionDef = FunctionSignatureWithOptionalVisibility CodeBlock
+// {
+//     pin = 1
+// //    recoverWhile = Item_recover
+// }
+// //NativeFunctionDef = native FunctionSignatureWithOptionalVisibility ";"
+
+// //FunctionDef = fun ident TypeParameterList?
+// //                    FunctionParameterList
+// //                    ReturnType? AcquiresType?
+// //                    CodeBlock
+// //{
+// //    pin = "fun"
+// //    name = "function"
+// //    implements = [
+// //        "org.move.lang.core.psi.MoveNameIdentifierOwner"
+// ////        "org.move.lang.core.psi.MoveTypeParametersOwner"
+// //        "org.move.lang.core.psi.MoveFunctionSignatureOwner"
+// //    ]
+// ////    extends = "org.move.lang.core.psi.MoveStubbedNamedElementImpl<?>"
+// //    mixin = "org.move.lang.core.psi.mixins.MoveFunctionDefMixin"
+// //    recoverWhile = Item_recover
+// ////    stubClass = "org.move.lang.core.stubs.MoveFunctionDefStub"
+// ////    elementTypeFactory = "org.move.lang.core.stubs.StubImplementationsKt.factory"
+// //}
+
+// FunctionVisibilityModifier = public ("(" (script | friend) ")")?
+
+// //private FunctionReturnItems = ReturnType? AcquiresType?
+// //{
+// //    recoverWhile = FunctionReturnItems_recover
+// //}
+// //private FunctionReturnItems_recover = !(CodeBlock | ";" | Item_first)
+
+// FunctionParameterList = "(" FunctionParameter_with_recover* ")"
+// {
+//     pin = 1
+// //    extends = "org.move.lang.core.psi.MoveStubbedElementImpl<?>"
+// //    stubClass = "org.move.lang.core.stubs.PlaceholderStub"
+// //    elementTypeFactory = "org.move.lang.core.stubs.StubImplementationsKt.factory"
+// }
+// //private FunctionParameterList_body = <<comma_separated_list FunctionParameter>> {
+// //    recoverWhile = "FunctionParameterList_body_recover"
+// //}
+// //private FunctionParameterList_body_recover = !")"
+
+// private FunctionParameter_with_recover = !(")" | "{" | ";") FunctionParameter ("," | &")")
+// {
+//     pin = 1
+//     recoverWhile = FunctionParameter_recover
+// }
+// private FunctionParameter_recover = !(")" | "{" | ";" | ident)
+
+// FunctionParameter = ident TypeAnnotation
+// {
+//     pin = 1
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.types.HasType"
+//     ]
+//     mixin = "org.move.lang.core.psi.mixins.MoveFunctionParameterMixin"
+// }
+
+// // u8 | (u8,) | (u8, u8) | (u8, u8,)
+// // tuples only allowed as a return types
+// ReturnType = ":" ReturnTypeItem_with_recover { pin = 1 }
+// private ReturnTypeItem_with_recover = Type
+// {
+//     pin = 1
+//     recoverWhile = ReturnTypeItem_recover
+// }
+// private ReturnTypeItem_recover = !( "{" | ";" | acquires )
+
+// // acquires T, Record
+// AcquiresType = acquires AcquiresType_items { pin = 1 }
+// private AcquiresType_items = <<comma_sep_items QualPathType>>
+// {
+//     recoverWhile = AcquiresType_items_recover
+// }
+// private AcquiresType_items_recover = !(";" | "{")
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Structs
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// StructSignature = struct ident TypeParameterList? AbilitiesList?
+// {
+//     pin = "struct"
+//     implements = [
+//         "org.move.lang.core.psi.MoveTypeParametersOwner"
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//     ]
+//     mixin = "org.move.lang.core.psi.mixins.MoveStructSignatureMixin"
+// }
+
+// StructDef = StructSignature StructFieldsDefBlock
+
+// //NativeStructDef = native resource? struct ident TypeParameterList? ";"
+// //{
+// //    pin = "struct"
+// //    implements = [
+// //        "org.move.lang.core.psi.MoveTypeParametersOwner"
+// //        "org.move.lang.core.psi.MoveNameIdentifierOwner"
+// //    ]
+// //    mixin = "org.move.lang.core.psi.mixins.MoveNativeStructDefMixin"
+// //}
+
+// //StructDef = resource? struct ident
+// //                TypeParameterList? StructTraitList?
+// //                StructFieldsDefBlock
+// //{
+// //    pin = "struct"
+// //    implements = [
+// //        "org.move.lang.core.psi.MoveTypeParametersOwner"
+// //        "org.move.lang.core.psi.MoveNameIdentifierOwner"
+// //    ]
+// //    mixin = "org.move.lang.core.psi.ext.MoveStructDefMixin"
+// //}
+
+// AbilitiesList = has <<comma_sep_items Ability>> { pin = 1 }
+// Ability = copy | ident
+// {
+//     name = "ability"
+// }
+
+// StructFieldsDefBlock = "{" StructFieldDef_with_recover* "}" { pin = 1 }
+// private StructFieldDef_with_recover = !"}" StructFieldDef ("," | &"}")
+// {
+//     pin = 1
+//     recoverWhile = StructFieldDef_recover
+// }
+// private StructFieldDef_recover = !("}" | ident)
+
+// //private StructFieldsBlock_body = <<comma_sep_list StructFieldDef>>?
+// {
+// //    recoverWhile = "StructFieldsBlock_body_recover"
+// }
+// //private StructFieldsBlock_body_recover = !"}"
+
+// StructFieldDef = ident TypeAnnotation &("," | "}")
+// {
+//     pin = 1
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.types.HasType"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructFieldDefMixin"
+// }
+// //private StructFieldDef_type = TypeAnnotation
+// //{
+// //    recoverWhile = "StructFieldDef_type_recover"
+// //}
+// //private StructFieldDef_type_recover = !(","|"}")
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Imports
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // "use 0x0::Transaction as MyTransaction;"
+// //ImportStatement = use ModuleRef ("::" Import) ";"
+// //{
+// //    pin = 1
+// //}
+
+// //ImportStatement = use AddressRef "::" Import ";"
+// //{
+// //    pin = 1
+// //}
+// FriendStatement = friend FullyQualifiedModuleRef ";" { pin = 1 }
+
+// ImportStatement = use (ModuleItemsImport | ModuleImport) ";"
+// {
+//     pin = 1
+// }
+// //private ImportStatement_recover = !ModuleItem_first
+// //private ImportStatement_body = ModuleItemsImport | ModuleImport
+
+// //private ImportStatement_body = AddressRef "::" Import
+// //{
+// //    recoverWhile = ImportStatement_body_recover
+// //}
+// //private ImportStatement_body_recover = !";"
+
+// //Import = ItemImport | ModuleImport
+// ModuleImport = FullyQualifiedModuleRef ImportAlias?
+// {
+// //    extends = Import
+//     name = "qual path to imported item"
+//     implements = [
+//         "org.move.lang.core.psi.MoveNamedElement"
+// //        "org.move.lang.core.psi.MoveReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveModuleImportMixin"
+// }
+// ModuleItemsImport = FullyQualifiedModuleRef "::" (ItemImport | MultiItemImport)
+// {
+//     pin = 2
+//     name = "qual path to imported item"
+// //    extends = Import
+// }
+
+// MultiItemImport = "{" <<comma_sep_items MultiItemImport_member_with_recovery>> "}"
+// {
+//     pin = 1
+// }
+// private MultiItemImport_member_with_recovery = !("}" | ";" | EOI) ItemImport
+// {
+//     pin = 1
+// }
+
+// //private MultiImportedItem_items = <<comma_sep_items ImportedItem>>
+// //{
+// //    recoverWhile = MultiImportedItem_items_recovery
+// //}
+// //private MultiImportedItem_items_recovery = !"}"
+
+// ItemImport = ident ImportAlias?
+// {
+//     pin = 1
+//     name = "item name"
+//     implements = [
+//         "org.move.lang.core.psi.MoveNamedElement"
+//         "org.move.lang.core.psi.MoveReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveItemImportMixin"
+// }
+// ImportAlias = as ident
+// {
+//     pin = 1
+//     implements = [ "org.move.lang.core.psi.MoveNameIdentifierOwner" ]
+//     mixin = "org.move.lang.core.psi.ext.MoveImportAliasMixin"
+// }
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Types
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+TypeAnnotation = {":"~Type} 
+
+Type = {RefType | QualPathType | TupleType | LambdaType}
+// {
+//     implements = ["org.move.lang.core.types.HasType"]
+//     mixin = "org.move.lang.core.psi.ext.MoveTypeMixin"
+// }
+
+RefType = {RefTypeStart~Type}
+// {
+//     pin = 1
+//     mixin = "org.move.lang.core.psi.ext.MoveRefTypeMixin"
+// }
+RefTypeStart = {"&"~"mut"?}
+
+QualPathType = {QualPath}
+// {
+//     name = "type"
+//     implements = [
+//         "org.move.lang.core.psi.MoveQualTypeReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveQualPathTypeMixin"
+// }
+
+// TupleType = "(" TupleTypeItem_with_recover* ")" { pin = 1 }
+// private TupleTypeItem_with_recover = !")" Type ("," | &")")
+// {
+//     pin = 1
+//     recoverWhile = TupleTypeItem_recover
+// }
+// private TupleTypeItem_recover = !(")" | "{" | ident)
+
+// LambdaType = "|" <<comma_sep_items Type>>? "|" Type { pin = 1 }
+
+// TypeParameterList = "<" TypeParameter_with_recover* ">"
+// {
+//     pin = 1
+// }
+// private TypeParameter_with_recover = !">" TypeParameter ("," | &">")
+// {
+//     pin = 1
+//     recoverWhile = TypeParameter_recover
+// }
+// private TypeParameter_recover = !(">" | "(" | "{" | ident)
+
+// //private TypeParameterList_items = <<comma_sep_items TypeParameter>>
+// //{
+// //    recoverWhile = TypeParameterList_items_recovery
+// //}
+// //private TypeParameterList_items_recovery = !("{"|"("|">")
+
+// TypeParameter = ident TypeParamBound? {
+//     pin = 1
+//     implements = [ "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//                    "org.move.lang.core.types.HasType" ]
+//     mixin = "org.move.lang.core.psi.mixins.MoveTypeParameterMixin"
+// }
+// TypeParamBound = ":" TypeParamBound_items
+// {
+//     pin = 1
+// }
+// private TypeParamBound_items = Ability ( "+" Ability )*
+// {
+//     recoverWhile = TypeParamBound_items_recover
+// }
+// private TypeParamBound_items_recover = !(">" | ",")
+
+// TypeArgumentList = "<" <<comma_sep_items (TypeArgument &(","|">"))>>? ">"
+// TypeArgument = Type
+// //private TypeArgumentList_items = <<comma_sep_items (QualifiedPathType &(","|">"))>>
+// //{
+// //    recoverWhile = TypeArgumentList_items_recover
+// //}
+// //private TypeArgumentList_items_recover = !(">"|"("|"{")
+// //private TypeArgument = TypeRef &(","|">")
+// //{
+// //    recoverWhile = "TypeArgument_recover"
+// //}
+// //private TypeArgument_recover = !(","|">")
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Patterns (destructuring)
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+Pat = {DerefPat
+        | BorrowPat
+        | TuplePat
+        | StructPat
+        | DotPat
+        | WildPat
+        | BindingPat}
+
+WildPat ={"~_"}
+DerefPat ={"*"~ Pat}
+BorrowPat ={"&"~ Pat}
+DotPat ={ident~ "."~ ident}
+
+// BindingPat = ident {
+//     implements = [ "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//                    "org.move.lang.core.types.HasType" ]
+//     mixin = "org.move.lang.core.psi.ext.MoveBindingPatMixin"
+// }
+
+// TuplePat = "(" <<comma_sep_items Pat>>? ")"
+// //private TuplePat_body = (<<comma_sep_list Pat>>)? {
+// //    recoverWhile = "TuplePat_body_recover"
+// //}
+// //private TuplePat_body_recover = !(")"|"=")
+
+// StructPat = QualPath StructPatFieldsBlock {
+//     implements = [
+//         "org.move.lang.core.psi.MoveQualTypeReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructPatMixin"
+// }
+// StructPatFieldsBlock = "{" StructPatField_with_recover* "}" { pin = 1 }
+
+// private StructPatField_with_recover = !"}" StructPatField ("," | &"}")
+// {
+//     pin = 1
+//     recoverWhile = StructPatField_recover
+
+// }
+// private StructPatField_recover = !("}" | ident)
+
+// //private StructPatField_items = <<comma_sep_items StructPatField>>
+// //{
+// //    recoverWhile = StructPatField_items_recover
+// //}
+// //private StructPatField_items_recover = !"}"
+
+// StructPatField = ident StructPatFieldBinding? {
+//     pin = 1
+//     implements = [
+//         "org.move.lang.core.psi.MoveNameIdentifierOwner"
+//         "org.move.lang.core.psi.MoveStructFieldReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructPatFieldMixin"
+// }
+// StructPatFieldBinding = ":" Pat { pin = 1 }
+
+// //private StructPatField_recovery = !("," | "}" | ident)
+
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Statements
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// //private Statement = IfStatement | LoopStatement | WhileStatement
+// //                            | LetStatement | AssignmentStatement
+// //                            | ExprStatement
+
+// Statement = LetStatement | (StatementExpr ";")
+// LetStatement = let Pat TypeAnnotation? Initializer? ";" {
+//     pin = 1
+// //    implements = [
+// //        "org.move.lang.core.types.HasType"
+// //    ]
+// //    mixin = "org.move.lang.core.psi.mixins.MoveLetStatementMixin"
+// }
+
+// private StatementExpr = IfExpr
+//                             | LoopExpr
+//                             | WhileExpr
+// //                            | LetExpr
+// //                            | AssignmentExpr
+//                             | Expr
+// {
+//     recoverWhile = "StatementExpr_recover"
+// }
+// private StatementExpr_recover = !(";" | "}")
+
+// //InlineSpecBlock = spec SpecBlock { pin = 1 }
+
+// //IfStatement = IfExpr ";"
+// //LoopStatement = LoopExpr ";"
+// //WhileStatement = WhileExpr ";"
+
+// //private StatementBody = IfExpr
+
+// //LetStatement = LetStatementInner ";"
+// //private LetStatementInner = LetExpr { recoverWhile = "LetStatementInner_recover"}
+// //private LetStatementInner_recover = !";"
+
+// //AssignmentStatement = AssignmentExpr ";"
+// //ExprStatement = Expr ";"
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Blocks
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// private AnyBlock = CodeBlock | InlineBlock
+
+// InlineBlock = Expr
+
+// CodeBlockExpr = CodeBlock
+// CodeBlock = "{" CodeBlockItems  "}"
+// {
+//     pin = 1
+// //    implements = [ "org.move.lang.core.psi.MoveImportStatementsOwner" ]
+// }
+
+// private CodeBlockItems = ImportStatement* (Statement | BlockSpecStatement)* Expr?
+// {
+//     recoverWhile = "CodeBlockItems_recover"
+// }
+// private CodeBlockItems_recover = !"}"
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Expressions
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // from lowest to highest
+// Expr = AssignmentExpr
+//         | ImplyOperatorsExprItem
+//         | OrExpr
+//         | AndExpr
+//         | LogicalEqExprItem
+//         | BitOrExpr
+//         | BitXorExpr
+//         | BitAndExpr
+//         | (LeftShiftExpr | RightShiftExpr)
+//         | AddExprItem
+//         | MulExprItem
+//         | ControlFlowExpr
+//         | CastExpr
+//         | UnaryExpr
+//         | BorrowExpr
+//         | AtomExpr
+// {
+//     implements = ["org.move.lang.core.types.HasType"]
+//     mixin = "org.move.lang.core.psi.ext.MoveExprMixin"
+// }
+// //private SpecExpr = Expr | AggregatePredicate
+
+// private MulExprItem = DivExpr | MulExpr | ModExpr
+// private AddExprItem = PlusExpr | MinusExpr
+// private LogicalEqExprItem = EqualsExpr | NotEqualsExpr | LessEqualsExpr | LessExpr | GreaterEqualsExpr | GreaterExpr
+
+// //private AssignmentExprItem = LetExpr | AssignmentExpr
+// private ControlFlowExpr = IfExpr | LoopExpr | WhileExpr
+// private UnaryExpr = CopyExpr | MoveExpr | DerefExpr | BangExpr
+//                       | ReturnExpr | ContinueExpr | BreakExpr | AbortExpr
+// private AtomExpr =
+// //IfExpr
+// //                    | LoopExpr
+// //                    | WhileExpr
+// //                    | LetExpr
+//                     AnnotatedExpr
+//                     | TupleLiteralExpr
+//                     | ParensExpr
+// //                    | AssignmentExpr
+//                     | StructLiteralExpr
+//                     | DotExpr
+//                     | IndexExpr
+//                     | CallExpr
+//                     | RefExpr
+//                     | LambdaExpr
+//                     | RangeExpr
+//                     | LiteralExpr
+//                     | CodeBlockExpr
+
+// EqualsExpr = Expr (!eqeq_gt "==") Expr
+// NotEqualsExpr = Expr "!=" Expr
+
+// OrExpr = Expr oror Expr
+// AndExpr = Expr andand Expr
+
+// LessExpr = Expr (!(ltlt | lt_eqeq_gt) "<") Expr
+// GreaterExpr = Expr (!gtgt ">") Expr
+// LessEqualsExpr = Expr lteq Expr
+// GreaterEqualsExpr = Expr gteq Expr
+
+// BitOrExpr = Expr (!oror "|") Expr
+// BitAndExpr = Expr (!andand "&") Expr
+// BitXorExpr = Expr "^" Expr
+
+// CastExpr = Expr as Type
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveCastExprMixin"
+// }
+
+// private AnnotatedExpPrefix = "(" Expr ":"
+// AnnotatedExpr = AnnotatedExpPrefix Type ")" { pin = 1 }
+
+// MulExpr = Expr "*" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveMulExprMixin"
+// }
+// DivExpr = Expr "/" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveDivExprMixin"
+// }
+// PlusExpr = Expr "+" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MovePlusExprMixin"
+// }
+// MinusExpr = Expr "-" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveMinusExprMixin"
+// }
+
+// ModExpr = Expr "%" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveModExprMixin"
+// }
+
+// LeftShiftExpr = Expr ltlt Expr
+// RightShiftExpr = Expr gtgt Expr
+
+// private ImplyOperatorsExprItem = ImplyOperatorExpr | PartialImplyOperatorExpr
+// ImplyOperatorExpr = Expr eqeq_gt Expr
+// PartialImplyOperatorExpr = Expr lt_eqeq_gt Expr
+
+// BangExpr = "!" Expr
+// { mixin = "org.move.lang.core.psi.ext.MoveBangExprMixin" }
+
+// DerefExpr = "*" Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveDerefExprMixin"
+// }
+// CopyExpr = copy Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveCopyExprMixin"
+// }
+// MoveExpr = move Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveMoveExprMixin"
+// }
+
+// ReturnExpr = return Expr?
+// AbortExpr = abort Expr
+// BreakExpr = break
+// ContinueExpr = continue
+
+// StructLiteralExpr = QualPath StructLiteralFieldsBlock
+// {
+//     implements = ["org.move.lang.core.psi.MoveQualTypeReferenceElement"]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructLiteralExprMixin"
+// }
+// StructLiteralFieldsBlock = "{" StructLiteralField_with_recover* "}" { pin = 1 }
+// //private StructLiteralFieldsBlock_items = <<comma_sep_items StructLiteralField>>
+// //{
+// //    recoverWhile = StructLiteralFieldsBlock_items_recovery
+// //}
+// //private StructLiteralFieldsBlock_items_recovery = !"}"
+// //private StructLiteralFieldsBlock_body = (StructLiteralExprField ","?)*
+// //{
+// //    recoverWhile = "StructLiteralFieldsBlock_body_recover"
+// //}
+// //private StructLiteralFieldsBlock_body_recover = !"}"
+// private StructLiteralField_with_recover = !"}" StructLiteralField ("," | &"}")
+// {
+//     pin = 1
+//     recoverWhile = StructLiteralField_recover
+// }
+// private StructLiteralField_recover = !("}" | ident)
+
+// StructLiteralField = ident StructLiteralFieldAssignment?
+// {
+//     pin = 1
+//     implements = [
+//         "org.move.lang.core.psi.MoveStructFieldReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructLiteralFieldMixin"
+// //    recoverWhile = StructLiteralExprField_recover
+// }
+
+// //private StructLiteralExprField_recover = !("," | "}")
+// StructLiteralFieldAssignment = ":" Expr { pin = 1 }
+
+// ParensExpr = "(" Expr ")"
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveParensExprMixin"
+// }
+// //private ParensExpr_body = Expr { recoverWhile = "ParensExpr_body_recover" }
+// //private ParensExpr_body_recover = !(":"|")"|",")
+// //private ParensExprBody = Expr { recoverWhile = "ParensExprBody_recover"}
+// //private ParensExprBody_recover = !(":"|")")
+
+// //TupleLiteralExpr = "("
+// //TupleLiteralExpr = "(" TupleLiteralExpr? ")" { pin = 2 }
+// //private TupleLiteralExpr_body = (Expr "," (Expr ","?)*)?
+// LambdaExpr = "|" <<comma_sep_items ident>> "|" Expr { pin = 1 }
+// RangeExpr = Expr ".." Expr
+
+// TupleLiteralExpr = EmptyTupleExpr | TupleExpr
+// private EmptyTupleExpr = "(" ")"
+// private TupleExpr = "(" Expr "," <<comma_sep_items Expr>>? ")" { pin = 3 }
+
+// LiteralExpr = BOOL_LITERAL
+//                 | INTEGER_LITERAL
+//                 | HEX_STRING_LITERAL
+//                 | BYTE_STRING_LITERAL
+//                 | SENDER_ADDRESS_LITERAL
+//                 | ADDRESS_LITERAL
+//                 | BECH32_ADDRESS_LITERAL
+//                 | POLKADOT_ADDRESS_LITERAL
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveLiteralExprMixin"
+// }
+
+// CallExpr = (QualPath &"(") CallArguments
+// {
+//     pin = 1
+//     implements = ["org.move.lang.core.psi.MoveQualNameReferenceElement"]
+//     mixin = "org.move.lang.core.psi.ext.MoveCallExprMixin"
+// }
+
+// CallArguments = "(" <<comma_sep_items (Expr &(","|")"))>>? ")" { pin = 1 }
+// //private CallArgument = Expr {
+// //    recoverWhile = "CallArgument_recover"
+// //}
+// //private CallArgument_recover = !(","|")")
+
+// IfExpr = if Condition AnyBlock ElseBlock? { pin = 1 }
+// //private IfExprBody = AnyBlock {
+// //    recoverWhile = "IfExprBody_recover"
+// //}
+// //private IfExprBody_recover = !";"
+
+// Condition = "(" ConditionBody ")" { pin = 1 }
+// private ConditionBody = Expr { recoverWhile = "ConditionBody_recover" }
+// private ConditionBody_recover = !")"
+
+// ElseBlock = else AnyBlock { pin = 1 }
+
+// LoopExpr = loop AnyBlock { pin = 1 }
+// WhileExpr = while Condition AnyBlock { pin = 1 }
+
+// AssignmentExpr = Expr Initializer { rightAssociative = true }
+
+// Initializer = "=" Expr {
+//     pin = 1
+// //    recoverWhile = "Initializer_recover"
+// }
+// //private Initializer_recover = !(";"|"}"|")")
+
+// BorrowExpr = "&" mut? Expr
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveBorrowExprMixin"
+// }
+
+// DotExpr = Expr "." StructFieldRef
+// {
+//     mixin = "org.move.lang.core.psi.ext.MoveDotExprMixin"
+// }
+
+// StructFieldRef = ident
+// {
+//     implements = ["org.move.lang.core.psi.MoveStructFieldReferenceElement"]
+//     mixin = "org.move.lang.core.psi.ext.MoveStructFieldRefMixin"
+// }
+
+// IndexExpr = Expr "[" Expr "]" { rightAssociative = true }
+
+// RefExpr = QualPath
+// {
+//     implements = [
+//         "org.move.lang.core.psi.MoveQualNameReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveRefExprMixin"
+// }
+
+// QualPath = (ModuleRef "::")? ident TypeArgumentList?
+
+// //LocalQualPath = (ModuleRef "::" &ident)? ident TypeArgumentList?
+// //FullyQualPath = (FullyQualifiedModuleRef "::" &ident)? ident TypeArgumentList?
+
+// //FullyQual
+// //private QualPathModulePrefix = (FullyQualifiedModuleRef | ModuleRef) &"::"
+// //QualPathStart = FullyQualifiedModuleRef
+// //{
+// //    pin = 1
+// //}
+// //private QualPathPrefix = ((FullyQualifiedModuleRef | ModuleRef) "::")
+
+// ModuleRef = ImportedModuleRef | FullyQualifiedModuleRef
+// {
+//     implements = ["org.move.lang.core.psi.MoveReferenceElement"]
+// }
+
+// ImportedModuleRef = ident
+// {
+//     extends = ModuleRef
+//     mixin = "org.move.lang.core.psi.ext.MoveModuleRefMixin"
+// }
+
+// FullyQualifiedModuleRef = AddressRef "::" ident
+// {
+//     pin = 2
+//     extends = ModuleRef
+// //    implements = ["org.move.lang.core.psi.MoveReferenceElement"]
+//     mixin = "org.move.lang.core.psi.ext.MoveFullyQualifiedModuleRefMixin"
+// }
+
+AddressRef = {SENDER_ADDRESS_LITERAL
+                | ADDRESS_LITERAL
+                | BECH32_ADDRESS_LITERAL
+                | POLKADOT_ADDRESS_LITERAL}
+
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+// // Specs
+// ///////////////////////////////////////////////////////////////////////////////////////////////////
+SpecDef = {FunctionSpecDef
+                  | ModuleSpecDef
+                  | StructSpecDef
+                  | SchemaSpecDef
+                  | DefineFunctionSpecDef
+                  | NativeDefineFunctionSpecDef}
+
+SchemaSpecDef = {("spec"|"schema")~ident~TypeParameterList?~SpecBlock }
+
+FunctionSpecDef ={("spec"|"fun")~ident~SpecBlock}
+
+StructSpecDef = {("spec"|"struct")~ident~SpecBlock}
+
+ModuleSpecDef = {("spec"|"module")~SpecBlock}
+
+DefineFunctionSignature = {"define"~ident~TypeParameterList?~FunctionParameterList~ReturnType?}
+
+
+DefineFunction ={ DefineFunctionSignature~SpecBlock}
+
+NativeDefineFunction = {DefineFunctionSignature~";"}
+
+BlockSpecStatement = {"spec"~SpecBlock~";" }
+
+SpecBlock = {"{"~SpecBlockStatement_with_recover*~SpecBlockFinishingExpr_with_recover?~"}"}
+SpecBlockStatement = {VariableStatement | LocalVariableStatement | GlobalVariableStatement
+                              | ImportStatement
+                              | NativeFunctionDef
+                              | DefineFunction | DefineFunctionSpecDef
+                              | NativeDefineFunction | NativeDefineFunctionSpecDef
+                              | PragmaStatement
+                              | AssumeStatement
+                              | AssertStatement
+                              | AbortsIfStatement
+                              | SucceedsIfStatement
+                              | RequiresStatement
+                              | EnsuresStatement
+                              | ModifiesStatement
+                              | IncludeStatement
+                              | InvariantStatement
+                              | ApplyStatement
+                              | EmitsStatement
+                              | AggregatePredicateStatement
+                              | Statement}
+SpecBlockFinishingExpr = {SpecExpr | AggregateExpr | Expr}
+// //private SpecBlockItems = (
+// //                                Statement
+// //                                | DefineFunction | DefineFunctionSpec
+// //                                | NativeDefineFunction | NativeDefineFunctionSpec
+// //                                | VariableStatement | LocalVariableStatement | GlobalVariableStatement
+// //                                | PragmaStatement
+// //                                | AssumeStatement
+// //                                | AssertStatement
+// //                                | AbortsIfStatement
+// //                                | SucceedsIfStatement
+// //                                | RequiresStatement
+// //                                | EnsuresStatement
+// //                                | ModifiesStatement
+// //                                | IncludeStatement
+// //                                | InvariantStatement
+// //                                | ApplyStatement
+// //                                | AggregatePredicateStatement
+// //                            )*
+// //                            (SpecExpr | AggregatePredicate | Expr)?
+// //{
+// //    recoverWhile = SpecBlockItems_recover
+// //}
+// //private SpecBlockItems_recover = !"}"
+
+// VariableStatement = RefExpr TypeAnnotation ";" { pin = 2 }
+
+// LocalVariableStatement = local RefExpr TypeAnnotation ";" { pin = 1 }
+// GlobalVariableStatement = global RefExpr TypeAnnotation ";" { pin = 1 }
+
+// PragmaStatement = pragma <<comma_sep_items PragmaAttribute>> ";" { pin = 1 }
+// PragmaAttribute = ident ("=" LiteralExpr)?
+
+SpecExpr = {AssumeSpecExpr | AssertSpecExpr | AbortsIfSpecExpr | SucceedsIfSpecExpr
+                | RequiresSpecExpr | EnsuresSpecExpr | ModifiesSpecExpr | InvariantSpecExpr}
+// {
+//     extends = Expr
+// }
+
+AssumeStatement = {AssumeSpecExpr~";"}
+// AssumeSpecExpr = assume Predicate { pin = 1 }
+
+// AssertStatement = AssertSpecExpr ";"
+// AssertSpecExpr = assert Predicate { pin = 1 }
+
+// AbortsIfStatement = AbortsIfSpecExpr ";"
+// //noinspection BnfSuspiciousToken
+// AbortsIfSpecExpr = aborts_if Predicate WithExpr? { pin = 1 }
+// WithExpr = with Expr { pin = 1 }
+
+// SucceedsIfStatement = SucceedsIfSpecExpr ";"
+// //noinspection BnfSuspiciousToken
+// SucceedsIfSpecExpr = succeeds_if Predicate { pin = 1 }
+
+// RequiresStatement = RequiresSpecExpr ";"
+// RequiresSpecExpr = requires module? Predicate { pin = 1 }
+
+// EnsuresStatement = EnsuresSpecExpr ";"
+// EnsuresSpecExpr = ensures Predicate { pin = 1 }
+
+// ModifiesStatement = ModifiesSpecExpr ";"
+// ModifiesSpecExpr = modifies Expr { pin = 1 }
+
+// IncludeStatement = include SpecVisibility? Expr ";" { pin = 1 }
+
+// FunctionPattern = (public | internal)? ident TypeArgumentList? { pin = 2 }
+
+// InvariantStatement = InvariantSpecExpr ";"
+// InvariantSpecExpr = invariant
+//                     InvariantModifier?
+//                     Predicate { pin = 1 }
+// InvariantModifier = pack | unpack | module | update
+
+// SpecVisibility = "[" <<comma_sep_items SpecVisibilityModifier>> "]" { pin = 1 }
+// SpecVisibilityModifier = global | isolated | deactivated
+//                                 | concrete | abstract
+//                                 | assert | assume
+
+// EmitsStatement = emits Expr to Expr EmitsCondition? ";" { pin = 1 }
+// EmitsCondition = if Expr { pin = 1 }
+
+// ApplyStatement = apply ApplySchemaName
+//                     to <<comma_sep_items FunctionPattern>>
+//                      ( except <<comma_sep_items FunctionPattern>> )? ";"
+// {
+//     pin = 1
+// }
+
+// ApplySchemaName = QualPath
+//                     ("{" <<comma_sep_items ApplySchemaNameAttribute>> "}")?
+// {
+//     implements = [
+//         "org.move.lang.core.psi.MoveQualSchemaReferenceElement"
+//     ]
+//     mixin = "org.move.lang.core.psi.ext.MoveApplySchemaNameMixin"
+// }
+// ApplySchemaNameAttribute = ident ":" Expr
+
+// Predicate = SpecVisibility? (Expr | AggregateExpr)
+// //ExprPredicate = Expr
+
+// //PreconditionStatement = PreconditionExpr ";"
+// //PreconditionExpr = Precondition ":" Expr {
+// //    pin = 2
+// //}
+// //Precondition = ForAllExistsPrecondition | ExistsPrecondition | ForAllPrecondition
+
+// //ForAllExistsPrecondition = ForAllPrecondition ":" ExistsPrecondition { pin = 2 }
+
+// //private Precondition = ((ForAllPrecondition ":" ExistsPrecondition)
+// //                            | ExistsPrecondition
+// //                            | ForAllPrecondition) (":" Expr)?
+
+// AggregatePredicateStatement = AggregateExpr ";"
+// AggregateExpr = QuantifierExpr (":" Expr)?
+// {
+// //    pin = AggregatePredicate_body
+//     rightAssociative = true
+// }
+// //private AggregatePredicate_body = ":" Expr
+// //{
+// //    pin = 1
+// //    rightAssociative = true
+// //}
+// //private AggregatePrecondition = ExistsPrecondition
+// //                                | (ForAllPrecondition (":" AggregatePrecondition)?)
+
+// QuantifierWhere = where Expr
+// {
+//     pin = 1
+// //    rightAssociative = true
+// }
+
+// private QuantifierExpr = ForallQuantifier | ExistsQuantifier
+// ForallQuantifier = forall QuantifierBindings
+//                         (QuantifierWhere)? (":" QuantifierExpr)? { pin = 1 }
+// ExistsQuantifier = exists QuantifierBindings
+//                         (QuantifierWhere)? (":" QuantifierExpr)? { pin = 1 }
+
+// QuantifierBindings = <<comma_sep_items QuantifierBind>>
+// QuantifierBind = RangeQuantifierBind | TypeQuantifierBind
+
+// //ForAllPrecondition = forall PreconditionAttribute ("," PreconditionAttribute)* ForAllWhereCondition? {
+// //    pin = 1
+// //    extends = Precondition
+// //}
+// //ForAllWhereCondition = where Expr { pin = 1 }
+
+// //ExistsPrecondition = exists PreconditionAttribute ("," PreconditionAttribute)* ForAllWhereCondition? {
+// //    pin = 1
+// //    extends = Precondition
+// //}
+
+RangeQuantifierBind = {ident~"in"~RangeExpr }
+
+TypeQuantifierBind = {ident~":"~Type} 
+

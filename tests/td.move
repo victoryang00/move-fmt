@@ -1,7 +1,7 @@
 
 module M {
 
-use 0x1::DiemTimestamp;
+  use 0x1::DiemTimestamp;
 
   public fun theRun(blockHash:u64,addr:address) :u64{
 
