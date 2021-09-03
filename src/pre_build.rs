@@ -2,10 +2,8 @@ use pest_generator::derive_parser;
 use std::{fs::File, io::prelude::*, path::Path};
 
 #[test]
-#[ignore]
 pub fn gen_parser() {
     let pest = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src/grammar.pest"));
-    println!("{:?}",pest);
     let rs = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/src/grammar.rs"));
 
     let derived = {

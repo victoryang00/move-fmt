@@ -25,12 +25,4 @@ pub struct Settings {
     pub blank_lines: Option<usize>,
     /// spaces between `=`
     pub set_space: usize,
-    /// spaces between `|`
-    pub choice_space: usize,
-    /// spaces between `{ }`
-    pub braces_space: usize,
-    /// spaces between `~`
-    pub sequence_space: usize,
-    /// spaces between `( )`
-    pub parentheses_space: usize,
 }

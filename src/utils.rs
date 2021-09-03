@@ -11,11 +11,7 @@ impl Default for Settings {
             blank_lines: None,
             choice_first: true,
             choice_hanging: false,
-            set_space: 1,
-            choice_space: 0,
-            braces_space: 0,
-            sequence_space: 1,
-            parentheses_space: 0,
+            set_space: 0,
         }
     }
 }
@@ -43,8 +39,8 @@ pub fn get_lines(span: Span) -> (usize, usize) {
 #[derive(Clone)]
 pub struct GrammarRule {
     pub is_comment: bool,
-    pub identifier: String,
-    pub modifier: String,
+    pub module_decl: String,
+    pub transaction_script: String,
     pub code: String,
     pub lines: (usize, usize),
 }
@@ -54,8 +50,8 @@ impl GrammarRule {
         GrammarRule {
             /// is_comment_or_blank_line
             is_comment: true,
-            identifier: "".to_string(),
-            modifier: "".to_string(),
+            module_decl: "".to_string(),
+            transaction_script: "".to_string(),
             code: c.to_string(),
             lines: (0, 0),
         }
@@ -64,12 +60,8 @@ impl GrammarRule {
         if self.is_comment {
             return self.code.clone();
         }
-        let mut code = self.identifier.clone();
-        while code.chars().count() < indent {
-            code.push_str(" ")
-        }
-        code.push_str(" = ");
-        code.push_str(&self.modifier);
+        let mut code = self.transaction_script.clone();
+        code.push_str(&self.module_decl);
         code.push_str(&self.code);
         return code;
     }
@@ -77,6 +69,6 @@ impl GrammarRule {
 
 impl Debug for GrammarRule {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        write!(f, "{}: {:?}", self.identifier, self.lines)
+        write!(f, "{}: {:?}", self.transaction_script, self.lines)
     }
 }
