@@ -7,7 +7,7 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-grammar_rules = _{ SOI ~ grammar_rule+ ~ EOI }
+grammar_rules = _{ SOI ~ grammar_rule ~ EOI }
 
 grammar_rule = {module_decl|transaction_script|move_script}
 
@@ -25,8 +25,8 @@ WHITESPACE = _{
 }
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//"~ANY* }
 
-alpha={ "a".."z" | "A".."Z" }
-digit={ "0".."9" }
+alpha={ 'a'..'z' | 'A'..'Z' }
+digit={ '0'..'9' }
 ident = { (alpha|digit|"$"|"_") ~ (alpha|digit|"$"|"_")*}
 field_name = {ident}
 procedure_name = {ident}
@@ -44,7 +44,7 @@ tau_list = {"unit"| (type_) *}
 
 // Values
 unsigned = {digit*}
-address = {"0x"~("0".."9"|"a"-"f"|"A"-"F")*}
+address = {"0x"~('0'..'9'|'a'..'f'|'A'..'F')*}
 bytes = {"b\""~(alpha|digit)*~"\""}
 value = {"true"|"false"|address|bytes|unsigned}
 SENDER_address={"{{sender}}"}
@@ -106,9 +106,6 @@ ModuleItem_item = {ImportStatement | FriendStatement
                             | NativeStructDef | NativeFunctionDef
                             | ConstDef
                             | SpecDef}
-ModuleItem_item = {ImportStatement | StructDef | NativeStructDef
-                          | NativeFunctionDef | ConstDef | ItemSpecDef
-                           | FunctionDef | FunctionVisibilityContainer}
 
 ConstDef = {"const"~ident~TypeAnnotation~Initializer~";"}
 
@@ -121,31 +118,28 @@ FunctionSignature = {"fun"~ident~TypeParameterList?~FunctionParameterList~Return
 FunctionSignature__recover = {!("{" | "}" | ";" | EOI | Item_first)}
 FunctionDef = {FunctionSignatureWithOptionalVisibility~CodeBlock}
 
-FunctionVisibilityModifier = {"public"~("("~(script | friend)~")")?}
+FunctionVisibilityModifier = {"public"~("("~("script" | "friend")~")")?}
 
-FunctionParameterList = {"(" FunctionParameter_with_recover* ")"}
-
-FunctionParameter_with_recover = {!(")" | "{" | ";") ~FunctionParameter ~("," | ")")}
-FunctionParameter_recover = {!(")" | "{" | ";" | ident)}
+FunctionParameterList = {"(" ~((FunctionParameter~",")*~FunctionParameter)?~ ")"}
 
 FunctionParameter = {ident~TypeAnnotation}
 ReturnType = {":"~ReturnTypeItem_with_recover} 
 ReturnTypeItem_with_recover = {Type}
 ReturnTypeItem_recover = {!( "{" | ";" | "acquires" )}
 
-// // acquires T, Record
+/// acquires T, Record
 AcquiresType = {"acquires"~ AcquiresType_items} 
 AcquiresType_items = { ((QualPathType~",") *~QualPathType)? }
 AcquiresType_items_recover = {!(";" | "{")}
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
-// // Structs
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Structs
+////////////////////////////////////////////////////////////////////////////////////////////////////
 StructSignature = {"struct"~ident~TypeParameterList?~AbilitiesList?}
 
 StructDef = {StructSignature~StructFieldsDefBlock}
 
-AbilitiesList = {"has" ((Ability~",") *~Ability)? }
+AbilitiesList = {"has"~((Ability~",") *~Ability)? }
 Ability = {"copy" | ident}
 
 StructFieldsDefBlock = {"{"~StructFieldDef_with_recover*~"}" }
@@ -154,9 +148,9 @@ StructFieldDef_recover = {!("}" | ident)}
 
 StructFieldDef = {ident~TypeAnnotation~("," | "}")}
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
-// // Imports
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Imports
+////////////////////////////////////////////////////////////////////////////////////////////////////
 FriendStatement = {"friend"~FullyQualifiedModuleRef~";" }
 
 ImportStatement = {"use"~(ModuleItemsImport | ModuleImport)~";"}
@@ -164,7 +158,7 @@ ImportStatement = {"use"~(ModuleItemsImport | ModuleImport)~";"}
 ModuleImport = {FullyQualifiedModuleRef~ImportAlias?}
 ModuleItemsImport = {FullyQualifiedModuleRef~"::"~(ItemImport | MultiItemImport)}
 
-MultiItemImport = {"{" ((MultiItemImport_member_with_recovery~",")*~MultiItemImport_member_with_recovery)?"}"}
+MultiItemImport = {"{"~ ((MultiItemImport_member_with_recovery~",")*~MultiItemImport_member_with_recovery)?~"}"}
 MultiItemImport_member_with_recovery = {!("}" | ";" | EOI)~ItemImport}
 
 ItemImport = {ident~ImportAlias?}
@@ -192,15 +186,15 @@ TypeParameter_with_recover = {!">"~TypeParameter~("," | &">")}
 TypeParameter_recover = {!(">" | "(" | "{" | ident)}
 TypeParameter = {ident~TypeParamBound?}
 TypeParamBound = {":"~TypeParamBound_items}
-TypeParamBound_items = {Ability~( "+" Ability )*}
+TypeParamBound_items = {Ability~( "+"~Ability )*}
 TypeParamBound_items_recover = {!(">" | ",")}
 
-TypeArgumentList = {"<"~<<comma_sep_items (TypeArgument &(","|">"))>>?~">"}
+TypeArgumentList = {"<"~(((TypeArgument ~(","|">"))~",") *~(TypeArgument ~(","|">")))? ~">"}
 TypeArgument = {Type}
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
-// // Patterns (destructuring)
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Patterns (destructuring)
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Pat = {DerefPat
         | BorrowPat
         | TuplePat
@@ -216,7 +210,7 @@ DotPat ={ident~ "."~ ident}
 
 BindingPat = {ident}
 
-TuplePat = {"(" ((Pat~",") *~Pat)? ")"}
+TuplePat = {"(" ~((Pat~",") *~Pat)? ~")"}
 
 StructPat ={ QualPath~StructPatFieldsBlock }
 StructPatFieldsBlock = {"{"~StructPatField_with_recover*~"}" }
@@ -226,15 +220,12 @@ StructPatField_recover = {!("}" | ident)}
 StructPatField = {ident~StructPatFieldBinding? }
 StructPatFieldBinding ={ ":"~Pat }
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
-// // Statements
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Statements
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Statement ={ LetStatement | (StatementExpr~";")}
 LetStatement = {"let"~Pat~TypeAnnotation?~Initializer?~";" }
-private StatementExpr = {IfExpr
-                            | LoopExpr
-                            | WhileExpr
-                            | Expr}
+StatementExpr = {IfExpr | LoopExpr | WhileExpr | Expr}
 AnyBlock = {CodeBlock | InlineBlock}
 
 InlineBlock = {Expr}
@@ -246,9 +237,9 @@ CodeBlock = {"{"~CodeBlockItems~ "}"}
 CodeBlockItems = {ImportStatement*~(Statement | BlockSpecStatement)*~Expr?}
 CodeBlockItems_recover = {!"}"}
 
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
-// // Expressions
-// ///////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+/// Expressions
+////////////////////////////////////////////////////////////////////////////////////////////////////
 Expr = {AssignmentExpr
         | ImplyOperatorsExprItem
         | OrExpr
@@ -283,8 +274,7 @@ AtomExpr ={ AnnotatedExpr
                     | RefExpr
                     | LambdaExpr
                     | RangeExpr
-                    | LiteralExpr
-                    | CodeBlockExpr}
+                    | CodeBlockExpr | LiteralExpr}
 
 EqualsExpr ={ Expr~"=="~Expr}
 NotEqualsExpr = {Expr~"!="~Expr}
@@ -292,13 +282,13 @@ NotEqualsExpr = {Expr~"!="~Expr}
 OrExpr = {Expr~"||"~Expr}
 AndExpr = {Expr~"&&"~Expr}
 
-LessExpr = {Expr~(!(ltlt | lt_eqeq_gt)~"<")~Expr}
-GreaterExpr ={ Expr~(!gtgt~">")~Expr}
-LessEqualsExpr = {Expr~lteq~Expr}
-GreaterEqualsExpr = {Expr~gteq~Expr}
+LessExpr = {Expr~(!("<<" | "<==>")~"<")~Expr}
+GreaterExpr ={ Expr~(!">>"~">")~Expr}
+LessEqualsExpr = {Expr~"<="~Expr}
+GreaterEqualsExpr = {Expr~">="~Expr}
 
-BitOrExpr = {Expr (!oror "|") Expr}
-BitAndExpr = {Expr~(!andand~"&")~Expr}
+BitOrExpr = {Expr~(!"||"~ "|")~Expr}
+BitAndExpr = {Expr~(!"&&"~"&")~Expr}
 BitXorExpr ={ Expr~"^"~Expr}
 
 CastExpr ={ Expr ~"as"~ Type}
@@ -346,18 +336,17 @@ StructLiteralFieldAssignment = {":"~Expr }
 
 ParensExpr = {"("~Expr~")"}
 
-LambdaExpr = {"|" ((ident~",") *~ident)? "|" Expr }
+LambdaExpr = {"|" ~((ident~",") *~ident)? ~"|"~ Expr }
 RangeExpr = {Expr~".."~Expr}
 
 TupleLiteralExpr = {EmptyTupleExpr | TupleExpr}
 EmptyTupleExpr = {"("~")"}
-TupleExpr = {"("~((Expr~",")*Expr)?~")"}
+TupleExpr = {"("~((Expr~",")*~Expr)?~")"}
 
-LiteralExpr = { value
-                | SENDER_address
-                | address}
+LiteralExpr = { SENDER_address
+                | address | value }
 CallExpr = {QualPath ~"("~CallArguments}
-CallArguments = "(" <<comma_sep_items (Expr &(","|")"))>>? ")" 
+CallArguments ={ "("~  (Expr~&(","|")"))?~ ")" }
 
 IfExpr = {"if"~Condition~AnyBlock~ElseBlock?}
 
@@ -389,9 +378,7 @@ ImportedModuleRef = {ident}
 FullyQualifiedModuleRef = {AddressRef~"::"~ident}
 
 AddressRef = {SENDER_address
-                | address
-                | BECH32_address
-                | POLKADOT_address}
+                | address}
 
 // ///////////////////////////////////////////////////////////////////////////////////////////////////
 // // Specs
@@ -421,6 +408,8 @@ NativeDefineFunction = {DefineFunctionSignature~";"}
 BlockSpecStatement = {"spec"~SpecBlock~";" }
 
 SpecBlock = {"{"~SpecBlockStatement_with_recover*~SpecBlockFinishingExpr_with_recover?~"}"}
+SpecBlockStatement_with_recover = { !("}" | EOI) ~ SpecBlockStatement }
+SpecBlockFinishingExpr_with_recover = {!("}" |EOI) ~SpecBlockFinishingExpr}
 SpecBlockStatement = {VariableStatement | LocalVariableStatement | GlobalVariableStatement
                               | ImportStatement
                               | NativeFunctionDef
@@ -442,10 +431,12 @@ SpecBlockStatement = {VariableStatement | LocalVariableStatement | GlobalVariabl
                               | Statement}
 SpecBlockFinishingExpr = {SpecExpr | AggregateExpr | Expr}
 
+DefineFunctionSpecDef = {"spec" ~DefineFunctionSignature ~SpecBlock}
+NativeDefineFunctionSpecDef = {"spec"~DefineFunctionSignature~";" }
 VariableStatement = {RefExpr~TypeAnnotation~";"}
 
-LocalVariableStatement = {local~RefExpr~TypeAnnotation~";"} 
-GlobalVariableStatement = {global~RefExpr~TypeAnnotation~";" }
+LocalVariableStatement = {"local"~RefExpr~TypeAnnotation~";"}
+GlobalVariableStatement = {"global"~RefExpr~TypeAnnotation~";" }
 
 PragmaStatement = {"pragma"~((PragmaAttribute~",")*~PragmaAttribute)?~";" }
 PragmaAttribute = {ident~("="~LiteralExpr)?}
@@ -467,7 +458,7 @@ SucceedsIfStatement = {SucceedsIfSpecExpr~";"}
 SucceedsIfSpecExpr = {"succeeds_if"~Predicate} 
 
 RequiresStatement = {RequiresSpecExpr~";"}
-RequiresSpecExpr = {"requires"~module?~Predicate }
+RequiresSpecExpr = {"requires"~"module"?~Predicate }
 
 EnsuresStatement = {EnsuresSpecExpr~";"}
 EnsuresSpecExpr = {"ensures"~Predicate }
@@ -483,27 +474,27 @@ InvariantStatement = {InvariantSpecExpr~";"}
 InvariantSpecExpr = {"invariant"~InvariantModifier?~Predicate }
 InvariantModifier = {"pack" | "unpack" | "module" | "update"}
 
-SpecVisibility = {"[" ((SpecVisibilityModifier~",")*~SpecVisibilityModifier)?"]"} 
+SpecVisibility = {"[" ~((SpecVisibilityModifier~",")*~SpecVisibilityModifier)?~"]"}
 SpecVisibilityModifier = {"global" | "isolated" | "deactivated"
                                 | "concrete" | "abstract"
                                 | "assert" | "assume"}
 
 EmitsStatement = {"emits"~Expr~"to"~Expr~EmitsCondition?~";" }
 EmitsCondition = {"if"~Expr }
-ApplyStatement = {"apply"~ApplySchemaName~"to"~((FunctionPattern~",")*~FunctionPattern)?~("except" ((FunctionPattern~",")*~FunctionPattern)? )?~";"}
+ApplyStatement = {"apply"~ApplySchemaName~"to"~((FunctionPattern~",")*~FunctionPattern)?~("except"~ ((FunctionPattern~",")*~FunctionPattern)? )?~";"}
 
-ApplySchemaName = QualPath~("{" ((ApplySchemaNameAttribute~",")*~ApplySchemaNameAttribute)?  "}")?
+ApplySchemaName ={ QualPath~("{"~ ((ApplySchemaNameAttribute~",")*~ApplySchemaNameAttribute)?~ "}")?}
 
 ApplySchemaNameAttribute = {ident~":"~Expr}
 
-Predicate = {SpecVisibility?~(Expr | AggregateExpr)}
+Predicate = {SpecVisibility?~(AggregateExpr | Expr )}
 AggregatePredicateStatement = {AggregateExpr~";"}
-AggregateExpr = {QuantifierExpr~(":" Expr)?}
+AggregateExpr = {QuantifierExpr~(":"~ Expr)?}
 
 QuantifierWhere = {"where"~Expr}
 QuantifierExpr = {ForallQuantifier | ExistsQuantifier}
-ForallQuantifier = {"forall"~QuantifierBindings~(QuantifierWhere)?~(":" QuantifierExpr)? }
-ExistsQuantifier = {"exists"~QuantifierBindings~(QuantifierWhere)?~(":" QuantifierExpr)? }
+ForallQuantifier = {"forall"~QuantifierBindings~(QuantifierWhere)?~(":" ~QuantifierExpr)? }
+ExistsQuantifier = {"exists"~QuantifierBindings~(QuantifierWhere)?~(":" ~QuantifierExpr)? }
 
 QuantifierBindings = {((QuantifierBind~",")*~QuantifierBind)?}
 QuantifierBind = {RangeQuantifierBind | TypeQuantifierBind}
