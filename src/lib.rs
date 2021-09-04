@@ -25,4 +25,5 @@ pub struct Settings {
     pub blank_lines: Option<usize>,
     /// spaces between `=`
     pub set_space: usize,
+    current_indent: usize,
 }

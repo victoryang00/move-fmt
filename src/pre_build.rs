@@ -10,13 +10,13 @@ pub fn gen_parser() {
         let path = pest.to_string_lossy();
         let pest = quote! {
             #[grammar = #path]
-            pub struct PestParser;
+            pub struct MoveParser;
         };
         derive_parser(pest, false)
     };
 
     let mut file = File::create(rs).unwrap();
 
-    let out = format!("pub struct PestParser;\n{}", derived);
+    let out = format!("pub struct MoveParser;\n{}", derived);
     writeln!(file, "{}", out).unwrap();
 }

@@ -12,6 +12,7 @@ impl Default for Settings {
             choice_first: true,
             choice_hanging: false,
             set_space: 0,
+            current_indent: 0,
         }
     }
 }

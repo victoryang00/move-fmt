@@ -29,7 +29,7 @@ module Test{
         }
 
         h = (move(seed) % 100) +1;
-        return move(h);
+        return move(h);/*sadkfjkasldf*/
     } 
 
 }
