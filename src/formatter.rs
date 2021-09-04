@@ -174,7 +174,6 @@ impl Settings {
                 },
                 Rule::procedure_name => {
                     code.push_str(pair.as_str());
-                    code.push_str("(");
                 }
                 Rule::var => {
                     code.push_str(pair.as_str());
@@ -183,9 +182,6 @@ impl Settings {
                 }
                 Rule::ir_type => {
                     code.push_str(pair.as_str());
-                    if counter < all {
-                        code.push_str(")");
-                    }
                 }
                 Rule::tau_list => match self.format_tau_list(pair) {
                     Ok(tau_list) => {
@@ -204,6 +200,14 @@ impl Settings {
                         code.push_str("}");
                     }
                     Err(e) => return Err(e),
+                }
+                Rule::left_column => {
+                    code.push_str("");
+                    code.push_str(pair.as_str())
+                }
+                Rule::right_column => {
+                    code.push_str(pair.as_str());
+                    code.push_str("");
                 }
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
@@ -243,6 +247,8 @@ impl Settings {
                 }
                 Rule::stmtx => match self.format_stmtx(pair) {
                     Ok(stmtx) => {
+                        code.push_str("\n");
+                        code.push_str(&*" ".repeat(self.current_indent));
                         code.push_str(&*stmtx);
                     }
                     Err(e) => return Err(e),
@@ -266,7 +272,7 @@ impl Settings {
     fn format_move_script(&self, pairs: Pair<Rule>) -> PestResult<String> {
         move_unimplemented!()
     }
-    fn format_stmtx(&self, pairs: Pair<Rule>) -> PestResult<String> {
+    fn format_stmtx(&mut self, mut pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
@@ -290,6 +296,22 @@ impl Settings {
                     }
                     Err(_) => {}
                 },
+                Rule::literal_if => code.push_str(pair.as_str()),
+                Rule::literal_else => {
+                    code.push_str("} ");
+                    code.push_str(pair.as_str());
+                    code.push_str(" {");
+                },
+                Rule::literal_while => {
+                    code.push_str(pair.as_str());
+                    code.push_str("{");
+                    self.current_indent+=self.indent;
+                }
+                Rule::literal_loop => {
+                    code.push_str(pair.as_str());
+                    code.push_str("{");
+                    self.current_indent+=self.indent;
+                }
                 Rule::stmtx => match self.format_stmtx(pair) {
                     Ok(stmt) => code.push_str(&*stmt),
                     Err(_) => {}
@@ -301,7 +323,7 @@ impl Settings {
     }
     fn format_exp(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
-        dbg!(pairs.borrow());
+        // dbg!(pairs.borrow());
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
@@ -314,6 +336,7 @@ impl Settings {
                     Err(_) => {}
                 },
                 Rule::value_operator => code.push_str(pair.as_str()),
+                Rule::binary_exp => code.push_str(pair.as_str()),
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
@@ -344,9 +367,9 @@ impl Settings {
     fn format_cmd(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         let raw = pairs.as_str();
-        if raw.starts_with("unit") {
-            code.push_str(" unit ");
-        }
+        code.push_str("\n");
+        code.push_str(&*" ".repeat(self.current_indent));
+
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
@@ -355,7 +378,7 @@ impl Settings {
                     Err(e) => return Err(e),
                 },
                 Rule::var => {
-                    code.push_str(pair.as_str());
+                    code.push_str(pair.as_str().trim());
                 }
                 Rule::exp => {
                     code.push_str(pair.as_str());
@@ -365,6 +388,11 @@ impl Settings {
                 }
                 Rule::field_name => {
                     code.push_str(pair.as_str());
+                }
+                Rule::equal => {
+                    code.push_str(&*" ".repeat(self.set_space));
+                    code.push_str(pair.as_str());
+                    code.push_str(&*" ".repeat(self.set_space));
                 }
                 _ => return Err(Unreachable(unreachable_rule!())),
             };

@@ -26,7 +26,7 @@ WHITESPACE = _{
 COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" | "//"~ANY* }
 
 alpha={ 'a'..'z' | 'A'..'Z' }
-digit={ '0'..'9' }
+digit={ '0'..'9'  }
 ident = { (alpha|digit|"$"|"_") ~ (alpha|digit|"$"|"_")*}
 field_name = {ident}
 procedure_name = {ident}
@@ -50,30 +50,39 @@ value = {"true"|"false"|address|bytes|unsigned}
 SENDER_address={"{{sender}}"}
 
 // Expression
-value_operator = {"copy"~"("~var~")" | "move"~"("~var~")"}
+value_operator = {"copy"~left_column~var~right_column | "move"~left_column~var~right_column}
 reference_operator = {"&"~var|"&"~exp~"."~field_name|"*"~exp}
 
 // Commands
-module_operator = {"move_from"~"<"~struct_name~">"~"("~exp~")"|"borrow_global"~"<"~struct_name~">"~"("~exp~")"|"exist"~"<"~struct_name~">"~"("~exp~")"}
-builtin = {"create_account"~"("~exp~")"|"release"~"("~exp~")"|"freeze"~"("~exp~")"}
-call = {module_operator|builtin|module_alias~"."~procedure_name~"("~((exp~",") *~exp)?~")"}
-cmd = {var~"="~call|var*~"="~exp|call|"*"~var~"="~exp|"assert"~"("~exp~","~exp~")"|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~"="~exp}
-stmtx = {stmt~stmtx|stmt}
-stmt = {"if"~"("~exp~")"~"{" ~stmtx~ "}"~"else"~"{"~stmtx~"}"|"if"~"("~exp~")"~"{"~stmtx~"}"|"while"~"("~exp~")"~"{"~stmtx~"}" |"loop"~"{"~stmtx~"}"| cmd~";"}
-expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
-exp = {expx~"||"~exp|expx~"&&"~exp|expx~">="~exp|expx~"<="~exp|expx~">"~exp|expx~"<"~exp|expx~"+"~exp|expx~"-"~exp|expx~"*"~exp|expx~"/"~exp|expx~"*"~exp|expx~"%"~exp|expx~"^"~exp|expx~"|"~exp|expx~"&"~exp|expx~"=="~exp|expx~"!="~exp|"("~exp~")"~exp|"("~exp~")"|expx}
+module_operator = {"move_from"~"<"~struct_name~">"~left_column~exp~right_column|"borrow_global"~"<"~struct_name~">"~left_column~exp~right_column|"exist"~"<"~struct_name~">"~left_column~exp~right_column}
 
+builtin = {builtin_start~left_column~exp~right_column}
+builtin_start = {"create_account"| "release"|"freeze"}
+call = {module_operator|builtin|module_alias~"."~procedure_name~left_column~((exp~",") *~exp)?~right_column}
+cmd = {var~equal~call|var*~equal~exp|call|"*"~var~equal~exp|"assert"~left_column~exp~","~exp~right_column|"break"|"continue"|"return"~((exp~",")*~exp)?|struct_name ~"{"~((field_name~":"~var~",")*~field_name~":"~var)?~"}"~equal~exp}
+equal = {"="}
+left_column = {"("}
+right_column = {")"}
+stmtx = {stmt~stmtx|stmt}
+stmt = {literal_if~left_column~exp~right_column~"{" ~stmtx~ "}"~literal_else~"{"~stmtx~"}"|literal_if~left_column~exp~right_column~"{"~stmtx~"}"|literal_while~left_column~exp~right_column~"{"~stmtx~"}" |literal_loop~"{"~stmtx~"}"| cmd~";"}
+literal_if = {"if"}
+literal_while = {"while"}
+literal_loop = {"loop"}
+literal_else = {"else"}
+expx = {value_operator|reference_operator|struct_name~"{"~(field_name~":"~expx)* ~"}"|"!"~expx|value}
+exp = {expx~binary_exp~exp|left_column~exp~right_column~exp|left_column~exp~right_column|expx}
+binary_exp = {"||"| "&&" |">="|"<="|">" |"<" |"+"|"-"|"*"|"/"|"*"|"%"|"^"|"|"|"&"|"=="|"!="}
 // Imports
 import_decl = {"import"~address~"."~module_name~"as"~module_name~";"|"import"~address~"."~module_name~";"}
 
 // Modules
 struct_decl = {"resourse"~struct_name~"{" ~(field_name~":"~base_type~",")*~field_name~":"~base_type~" }"|"struct"~struct_name~"{"~((field_name~":"~base_type~",")*~field_name~":"~base_type)?~"}"}
 procedure_body = {("let"~var~(":"~ground_type)?~";")*~stmtx}
-procedure_decl = {"public"?~procedure_name~"(" ~((var~":"~ir_type~",")*~var~":"~ir_type)?~")"~":"~tau_list~"{" ~procedure_body~"}" |"native"~"public"? ~procedure_name~"(" ~((var~":"~ir_type~",")*~var~":"~ir_type)?~")"~":"~tau_list~";"}
+procedure_decl = {"public"?~procedure_name~left_column ~((var~":"~ir_type~",")*~var~":"~ir_type)?~right_column~":"~tau_list~"{" ~procedure_body~"}" |"native"~"public"? ~procedure_name~left_column ~((var~":"~ir_type~",")*~var~":"~ir_type)?~right_column~":"~tau_list~";"}
 module_decl = {"module"~module_name~"{"~import_decl*~struct_decl*~procedure_decl*~"}"}
 
 // Transaction Scripts
-transaction_script = {import_decl*~"public"~"main"~"("~((var~":"~ground_type~",")*~var~":"~ground_type)?~")"}
+transaction_script = {import_decl*~"public"~"main"~left_column~((var~":"~ground_type~",")*~var~":"~ground_type)?~right_column}
 
 // Move script
 move_script = {(script_def | address_def | module_def)*}
@@ -90,7 +99,7 @@ moduleitem_item = {import_stmt | friend_stmt
                             | const_def
                             | spec_def}
 
-const_def = {"const"~ident~typeannotation~"="~_expr~";"}
+const_def = {"const"~ident~typeannotation~equal~_expr~";"}
 
 nat_function_def = {"native"~function_sig_withoptionalvisibility~";" }
 nat_struct_def = {"native"~struct_sig_~";"}
@@ -100,9 +109,9 @@ function_sig_visibility = {function_visibilitymodifier~function_sig_ }
 function_sig_ = {"fun"~ident~typeparameterlist?~function_parameterlist~returntype?~acquirestype?}
 function_def = {function_sig_withoptionalvisibility~codeblock}
 
-function_visibilitymodifier = {"public"~("("~("script" | "friend")~")")?}
+function_visibilitymodifier = {"public"~(left_column~("script" | "friend")~right_column)?}
 
-function_parameterlist = {"(" ~((function_parameter~",")*~function_parameter)?~ ")"}
+function_parameterlist = {left_column ~((function_parameter~",")*~function_parameter)?~ right_column}
 
 function_parameter = {ident~typeannotation}
 returntype = {":"~type_}
@@ -153,12 +162,12 @@ reftype = {reftypestart~type_}
 reftypestart = {"&"~"mut"?}
 qual_pathtype = {qual_path}
 
-tupletype = {"("~(type_~("," | &")"))*~")"}
+tupletype = {left_column~(type_~("," | &right_column))*~right_column}
 
 lambdatype = {"|"~((type_~",") *~type_)?~"|"~type_ }
 typeparameterlist = {"<"~typeparameter_with_recover*~">"}
 typeparameter_with_recover = {!">"~typeparameter~("," | &">")}
-typeparameter_recover = {!(">" | "(" | "{" | ident)}
+typeparameter_recover = {!(">" | left_column | "{" | ident)}
 typeparameter = {ident~typeparambound?}
 typeparambound = {":"~typeparambound_items}
 typeparambound_items = {ability~( "+"~ability )*}
@@ -184,7 +193,7 @@ dot_pat ={ident~ "."~ ident}
 
 binding_pat = {ident}
 
-tuple_pat = {"(" ~((_pat~",") *~_pat)? ~")"}
+tuple_pat = {left_column ~((_pat~",") *~_pat)? ~right_column}
 
 struct_pat ={ qual_path~struct_patfieldsblock }
 struct_patfieldsblock = {"{"~struct_patfield_with_recover*~"}" }
@@ -198,7 +207,7 @@ struct_patfieldbinding ={ ":"~_pat }
 /// _stmts
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 _stmt ={ let_stmt | (_stmt_expr~";")}
-let_stmt = {"let"~_pat~typeannotation?~("="~_expr)?~";" }
+let_stmt = {"let"~_pat~typeannotation?~(equal~_expr)?~";" }
 _stmt_expr = {if_expr | loop_expr | while_expr | _expr}
 anyblock = {codeblock | inlineblock}
 
@@ -230,7 +239,7 @@ _expr = { assignment_expr
         | unary_expr
         | borrow_expr
         | atom_expr}
-_exprx = {literal_expr}
+_exprx = { unary_expr| literal_expr}
 
 mul_expr_item = {div_expr | mul_expr | mod_expr}
 add_expr_item = {plus_expr | minus_expr}
@@ -269,8 +278,8 @@ bitxor_expr ={ _exprx~"^"~_expr}
 cast_expr ={ _exprx ~"as"~ type_}
 
 
-annotatedexpprefix = {"("~_expr~":"}
-annotated_expr = {annotatedexpprefix~type_~")" }
+annotatedexpprefix = {left_column~_expr~":"}
+annotated_expr = {annotatedexpprefix~type_~right_column }
 
 mul_expr = {_exprx~"*"~_expr}
 
@@ -287,7 +296,7 @@ bang_expr = {"!" ~_expr}
 deref_expr = {"*"~ _expr}
 
 copy_expr = {"copy" ~_expr}
-move_expr = {"move" ~_expr}
+move_expr = {"move" ~_expr|"move_to"~_expr}
 
 
 return_expr = {"return"~_expr?}
@@ -307,31 +316,31 @@ structliteral_field = {ident~structliteral_fieldassignment?}
 
 structliteral_fieldassignment = {":"~_expr }
 
-parens_expr = {"("~_expr~")"}
+parens_expr = {left_column~_expr~right_column}
 
 lambda_expr = {"|" ~((ident~",") *~ident)? ~"|"~ _expr }
 range_expr = {_exprx~".."~_expr}
 
 tupleliteral_expr = {emptytuple_expr | tuple_expr}
-emptytuple_expr = {"("~")"}
-tuple_expr = {"("~((_expr~",")*~_expr)?~")"}
+emptytuple_expr = {left_column~right_column}
+tuple_expr = {left_column~((_expr~",")*~_expr)?~right_column}
 
 literal_expr = { SENDER_address
                 | address | value }
-call_expr = {qual_path ~"("~callarguments}
-callarguments ={ "("~  (_expr~&(","|")"))?~ ")" }
+call_expr = {qual_path ~ callarguments}
+callarguments ={ left_column~  (_expr~&(","|right_column))?~ right_column }
 
-if_expr = {"if"~condition~anyblock~elseblock?}
+if_expr = {literal_if~condition~anyblock~elseblock?}
 
-condition = {"("~conditionbody~")"}
+condition = {left_column~conditionbody~right_column}
 conditionbody = {_expr}
-conditionbody_recover = {!")"}
+conditionbody_recover = {!right_column}
 
 elseblock = {"else"~anyblock}
 loop_expr = {"loop"~anyblock}
 while_expr = {"while"~condition~anyblock}
 
-assignment_expr ={ _exprx~"="~_expr }
+assignment_expr ={ _exprx~equal~_expr }
 
 borrow_expr = {"&"~"mut"?~_expr}
 
@@ -407,7 +416,7 @@ localvariable_stmt = {"local"~ref_expr~typeannotation~";"}
 globalvariable_stmt = {"global"~ref_expr~typeannotation~";" }
 
 pragma_stmt = {"pragma"~((pragmaattribute~",")*~pragmaattribute)?~";" }
-pragmaattribute = {ident~("="~literal_expr)?}
+pragmaattribute = {ident~(equal~literal_expr)?}
 
 spec_expr = {assumespec_expr | assertspec_expr | abortsifspec_expr | succeedsifspec_expr
              | requiresspec_expr | ensuresspec_expr | modifiesspec_expr | invariantspec_expr}
@@ -444,11 +453,11 @@ invariantmodifier = {"pack" | "unpack" | "module" | "update"}
 
 spec_visibility = {"[" ~((spec_visibilitymodifier~",")*~spec_visibilitymodifier)?~"]"}
 spec_visibilitymodifier = {"global" | "isolated" | "deactivated"
-                                | "concrete" | "abstract"
-                                | "assert" | "assume"}
+                          | "concrete" | "abstract"
+                          | "assert" | "assume"}
 
 emits_stmt = {"emits"~_expr~"to"~_expr~emits_condition?~";" }
-emits_condition = {"if"~_expr }
+emits_condition = {literal_if~_expr }
 apply_stmt = {"apply"~apply_schema_name~"to"~((function_pattern~",")*~function_pattern)?~("except"~ ((function_pattern~",")*~function_pattern)? )?~";"}
 
 apply_schema_name ={ qual_path~("{"~ ((apply_schema_name_attribute~",")*~apply_schema_name_attribute)?~ "}")?}
