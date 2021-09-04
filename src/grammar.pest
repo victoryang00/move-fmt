@@ -156,7 +156,7 @@ importalias = {"as"~ ident}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 typeannotation = {":"~type_}
 
-type_ = {reftype | qual_pathtype | tupletype | lambdatype}
+type_ = {reftype | qual_pathtype | tupletype | lambdatype | ident}
 
 reftype = {reftypestart~type_}
 reftypestart = {"&"~"mut"?}
@@ -173,7 +173,7 @@ typeparambound = {":"~typeparambound_items}
 typeparambound_items = {ability~( "+"~ability )*}
 typeparambound_items_recover = {!(">" | ",")}
 
-typeargumentlist = {"<"~(((type_ ~(","|">"))~",") *~(type_ ~(","|">")))? ~">"}
+typeargumentlist = {"<"~(type_ ~",") *~(type_ )? ~">"}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 /// patterns (destructuring)
@@ -239,7 +239,8 @@ _expr = { assignment_expr
         | unary_expr
         | borrow_expr
         | atom_expr}
-_exprx = { unary_expr| literal_expr}
+// _exprx = { unary_expr |call_expr | ident | ref_expr| lambda_expr| codeblock_expr |mul_expr_item|add_expr_item }
+_exprx = { unary_expr |call_expr | ident | ref_expr| lambda_expr| codeblock_expr }
 
 mul_expr_item = {div_expr | mul_expr | mod_expr}
 add_expr_item = {plus_expr | minus_expr}
@@ -260,7 +261,7 @@ atom_expr ={ annotated_expr
                     | range_expr
                     | codeblock_expr | literal_expr}
 
-equals_expr ={_exprx~"=="~_expr}
+equals_expr ={_exprx~(!"==>"~"==")~_expr}
 notequals_expr = {_exprx~"!="~_expr}
 
 or_expr = {_exprx~"||"~_expr}
@@ -268,7 +269,7 @@ and_expr = {_exprx~"&&"~_expr}
 
 less_expr = {_exprx~(!("<<" | "<==>")~"<")~_expr}
 greater_expr ={ _exprx~(!">>"~">")~_expr}
-lessequals_expr = {_exprx~"<="~_expr}
+lessequals_expr = {_exprx~(!("<<" | "<==>" | "<==")~"<=")~_expr}
 greaterequals_expr = {_exprx~">="~_expr}
 
 bitor_expr = {_exprx~(!"||"~ "|")~_expr}

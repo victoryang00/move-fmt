@@ -9,10 +9,7 @@ use std::{
     fs::{read_to_string, File},
     io::Write,
 };
-use text_utils::indent;
-use std::borrow::Borrow;
 
-#[macro_use]
 macro_rules! move_unimplemented {
     () => (Ok("".to_string()));
     ($($arg:tt)+) => (Ok("{}".to_string(), $crate::format_args!($($arg)+)));
@@ -219,7 +216,6 @@ impl Settings {
         let raw = pairs.as_str();
         let all = raw.matches("let").count();
         dbg!(all);
-        let mut counter = 0;
         if raw.contains("public") {
             code.push_str("public ");
         }
@@ -272,7 +268,7 @@ impl Settings {
     fn format_move_script(&self, pairs: Pair<Rule>) -> PestResult<String> {
         move_unimplemented!()
     }
-    fn format_stmtx(&mut self, mut pairs: Pair<Rule>) -> PestResult<String> {
+    fn format_stmtx(&mut self,  pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
@@ -366,7 +362,6 @@ impl Settings {
 
     fn format_cmd(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
-        let raw = pairs.as_str();
         code.push_str("\n");
         code.push_str(&*" ".repeat(self.current_indent));
 

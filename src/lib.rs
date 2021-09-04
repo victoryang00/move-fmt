@@ -6,6 +6,8 @@ extern crate proc_macro;
 #[cfg(test)]
 #[macro_use]
 extern crate quote;
+#[macro_use]
+extern crate lazy_static;
 
 #[cfg(test)]
 mod pre_build;
