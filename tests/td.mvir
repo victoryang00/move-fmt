@@ -22,13 +22,13 @@ module Test{
             salt = DiemTimestamp.now_microseconds();
             y = copy(salt) * 25 / (copy(salt) % 6);
             seed = 25 / 3;
-            seed = move(seed) + (move(salt) * 300);
+            seed = move(seed) +(move(salt) * 300);
             seed = move(seed) + move(y);
         }else{
             seed = 1;
         }
 
-        h = (move(seed) % 100) +1;
+        h = (move(seed) % 100)+1;
         return move(h);/*sadkfjkasldf*/
     } 
 

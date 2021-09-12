@@ -17,7 +17,6 @@ fn test_address() {
     };
 }
 
-
 #[test]
 fn test_move() -> PestResult<()> {
     let mut cfg = Settings::default();

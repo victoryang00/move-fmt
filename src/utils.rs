@@ -11,7 +11,8 @@ impl Default for Settings {
             blank_lines: None,
             choice_first: true,
             choice_hanging: false,
-            set_space: 0,
+            set_space: 1,
+            set_else: 1,
             current_indent: 0,
         }
     }

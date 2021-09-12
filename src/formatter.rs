@@ -9,6 +9,7 @@ use std::{
     fs::{read_to_string, File},
     io::Write,
 };
+use crate::grammar::Rule::cmd;
 
 macro_rules! move_unimplemented {
     () => (Ok("".to_string()));
@@ -268,7 +269,7 @@ impl Settings {
     fn format_move_script(&self, pairs: Pair<Rule>) -> PestResult<String> {
         move_unimplemented!()
     }
-    fn format_stmtx(&mut self,  pairs: Pair<Rule>) -> PestResult<String> {
+    fn format_stmtx(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
             match pair.as_rule() {
@@ -277,7 +278,7 @@ impl Settings {
                     Ok(comment) => code.push_str(&*comment),
                     Err(e) => return Err(e),
                 },
-                Rule::stmt => match self.format_stmtx(pair) {
+                Rule::stmt => match self.format_stmt(pair) {
                     Ok(stmt) => code.push_str(&*stmt),
                     Err(_) => {}
                 },
@@ -286,30 +287,75 @@ impl Settings {
                     Err(_) => {}
                 },
                 Rule::cmd => match self.format_cmd(pair) {
-                    Ok(cmd) => {
-                        code.push_str(&*cmd);
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
                         code.push_str(";");
                     }
                     Err(_) => {}
                 },
-                Rule::literal_if => code.push_str(pair.as_str()),
-                Rule::literal_else => {
-                    code.push_str("} ");
-                    code.push_str(pair.as_str());
-                    code.push_str(" {");
+                Rule::stmtx => match self.format_stmtx(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(_) => {}
                 },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    fn format_stmt(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::literal_if => {
+                    code.push_str("\n");
+                    code.push_str(" ".repeat(self.current_indent).as_str());
+                    code.push_str(pair.as_str());
+                }
+                Rule::literal_else => {
+                    code.push_str(" ".repeat(self.set_else).as_str());
+                    code.push_str(pair.as_str());
+                    code.push_str(" ".repeat(self.set_else).as_str());
+                }
                 Rule::literal_while => {
                     code.push_str(pair.as_str());
-                    code.push_str("{");
-                    self.current_indent+=self.indent;
                 }
                 Rule::literal_loop => {
                     code.push_str(pair.as_str());
-                    code.push_str("{");
-                    self.current_indent+=self.indent;
                 }
-                Rule::stmtx => match self.format_stmtx(pair) {
-                    Ok(stmt) => code.push_str(&*stmt),
+                Rule::stmtx => {
+                    self.current_indent += self.indent;
+                    match self.format_stmtx(pair) {
+                        Ok(stmt) => {
+                            code.push_str("{");
+                            code.push_str(&*stmt);
+                            self.current_indent -= self.indent;
+                            code.push_str("\n");
+                            code.push_str(" ".repeat(self.current_indent).as_str());
+                            code.push_str("}");
+                        }
+                        Err(_) => {}
+                    }
+                }
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::cmd => match self.format_cmd(pair) {
+                    Ok(cmd_) => {
+                        self.current_indent += self.indent;
+                        code.push_str(&*cmd_);
+                        code.push_str(";");
+                        self.current_indent -= self.indent;
+                    }
+                    Err(_) => {}
+                },
+                Rule::exp => match self.format_exp(pair) {
+                    Ok(exp_) => {
+                        code.push_str(&*exp_);
+                    }
                     Err(_) => {}
                 },
                 _ => return Err(Unreachable(unreachable_rule!())),
@@ -327,17 +373,69 @@ impl Settings {
                     Ok(comment) => code.push_str(&*comment),
                     Err(e) => return Err(e),
                 },
+                Rule::value => code.push_str(pair.as_str()),
                 Rule::expx => match self.format_exp(pair) {
                     Ok(exp) => code.push_str(&*exp),
                     Err(_) => {}
                 },
-                Rule::value_operator => code.push_str(pair.as_str()),
-                Rule::binary_exp => code.push_str(pair.as_str()),
+                Rule::exp => match self.format_exp(pair) {
+                    Ok(exp) => code.push_str(&*exp),
+                    Err(_) => {}
+                },
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::struct_name => { code.push_str(pair.as_str()) }
+                Rule::field_name => {
+                    code.push_str("{");
+                    code.push_str(pair.as_str());
+                    code.push_str(":");
+                }
+                Rule::value_operator => match self.format_value_operator(pair) {
+                    Ok(vop) => code.push_str(&*vop),
+                    Err(_) => {}
+                },
+                Rule::binary_exp => {
+                    code.push_str(" ");
+                    code.push_str(pair.as_str());
+                    code.push_str(" ");
+                }
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
         }
         Ok(code)
     }
+
+    fn format_value_operator(&self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        let raw = pairs.as_str();
+        if raw.starts_with("copy") {
+            code.push_str("copy");
+        }
+        if raw.starts_with("move") {
+            code.push_str("move");
+        }
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::left_column => {
+                    code.push_str(pair.as_str());
+                }
+                Rule::right_column => {
+                    code.push_str(pair.as_str());
+                }
+                Rule::var => {
+                    code.push_str(pair.as_str());
+                }
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+
     fn format_tau_list(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         let raw = pairs.as_str();
@@ -362,9 +460,33 @@ impl Settings {
 
     fn format_cmd(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
+        let raw = pairs.as_str();
         code.push_str("\n");
         code.push_str(&*" ".repeat(self.current_indent));
-
+        if raw.starts_with("return") {
+            code.push_str("return ");
+        }
+        if raw.starts_with("assert") {
+            code.push_str("assert ");
+        }
+        if raw.starts_with("break") {
+            code.push_str("break ");
+        }
+        if raw.starts_with("*") {
+            code.push_str("* ");
+        }
+        let mut has_comma = false;
+        if raw.contains(",") {
+            has_comma = true;
+        }
+        let mut has_m = false;
+        if raw.contains(":") {
+            has_m = true;
+        }
+        let mut is_close = false;
+        if raw.contains("{") && raw.contains("}") {
+            is_close = true;
+        }
         for pair in pairs.into_inner() {
             match pair.as_rule() {
                 Rule::WHITESPACE => continue,
@@ -374,15 +496,27 @@ impl Settings {
                 },
                 Rule::var => {
                     code.push_str(pair.as_str().trim());
+                    if is_close {
+                        code.push_str("}");
+                    }
                 }
                 Rule::exp => {
-                    code.push_str(pair.as_str());
+                    match self.format_exp(pair){
+                        Ok(comment) => code.push_str(&*comment),
+                        Err(e) => return Err(e),
+                    }
+                    if has_comma {
+                        code.push_str(", ");
+                    }
                 }
                 Rule::struct_name => {
                     code.push_str(pair.as_str());
                 }
                 Rule::field_name => {
                     code.push_str(pair.as_str());
+                    if has_comma {
+                        code.push_str(": ");
+                    }
                 }
                 Rule::equal => {
                     code.push_str(&*" ".repeat(self.set_space));
