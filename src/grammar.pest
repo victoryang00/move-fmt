@@ -223,28 +223,14 @@ codeblockitems_recover = {!"}"}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Expressions
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-_expr = { assignment_expr
-        | imply_operators_expr_item
-        | or_expr
-        | and_expr
-        | logicaleq_expr_item
-        | bitor_expr
-        | bitxor_expr
-        | bitand_expr
-        | (leftshift_expr | rightshift_expr)
-        | add_expr_item
-        | mul_expr_item
-        | controlflow_expr
-        | cast_expr
+_expr = { controlflow_expr
         | unary_expr
         | borrow_expr
-        | atom_expr}
-// _exprx = { unary_expr |call_expr | ident | ref_expr| lambda_expr| codeblock_expr |mul_expr_item|add_expr_item }
-_exprx = { unary_expr |call_expr | ident | ref_expr| lambda_expr| codeblock_expr }
+        | atom_expr
+        }
+_exprx = { (call_expr | ident) ~ ( _expr_op ~ _expr|ident)* }
+_expr_op = {"=="|"!="|"<="|">="|">"|"<"|"||"|"&&"|"|"|"&"|"^"|"as"|"*"|"/"|"+"|"-"|"%"|"<<"|">>"|"==>"|"<==>"|"="}
 
-mul_expr_item = {div_expr | mul_expr | mod_expr}
-add_expr_item = {plus_expr | minus_expr}
-logicaleq_expr_item = {equals_expr | notequals_expr | lessequals_expr | less_expr | greaterequals_expr | greater_expr}
 
 controlflow_expr ={ if_expr | loop_expr | while_expr}
 unary_expr = {copy_expr | move_expr | deref_expr | bang_expr
@@ -261,37 +247,9 @@ atom_expr ={ annotated_expr
                     | range_expr
                     | codeblock_expr | literal_expr}
 
-equals_expr ={_exprx~(!"==>"~"==")~_expr}
-notequals_expr = {_exprx~"!="~_expr}
-
-or_expr = {_exprx~"||"~_expr}
-and_expr = {_exprx~"&&"~_expr}
-
-less_expr = {_exprx~(!("<<" | "<==>")~"<")~_expr}
-greater_expr ={ _exprx~(!">>"~">")~_expr}
-lessequals_expr = {_exprx~(!("<<" | "<==>" | "<==")~"<=")~_expr}
-greaterequals_expr = {_exprx~">="~_expr}
-
-bitor_expr = {_exprx~(!"||"~ "|")~_expr}
-bitand_expr = {_exprx~(!"&&"~"&")~_expr}
-bitxor_expr ={ _exprx~"^"~_expr}
-
-cast_expr ={ _exprx ~"as"~ type_}
-
 
 annotatedexpprefix = {left_column~_expr~":"}
 annotated_expr = {annotatedexpprefix~type_~right_column }
-
-mul_expr = {_exprx~"*"~_expr}
-
-div_expr = {_exprx~"/"~_expr}
-plus_expr = {_exprx~"+"~_expr}
-minus_expr = {_exprx~"-"~_expr}
-mod_expr = {_exprx~"%"~_expr}
-leftshift_expr = {_exprx~"<<"~_expr}
-rightshift_expr = {_exprx~">>"~_expr}
-
-imply_operators_expr_item = {_exprx~"==>"~_expr | _exprx~"<==>"~_expr}
 
 bang_expr = {"!" ~_expr}
 deref_expr = {"*"~ _expr}
@@ -329,7 +287,7 @@ tuple_expr = {left_column~((_expr~",")*~_expr)?~right_column}
 literal_expr = { SENDER_address
                 | address | value }
 call_expr = {qual_path ~ callarguments}
-callarguments ={ left_column~  (_expr~&(","|right_column))?~ right_column }
+callarguments ={ left_column~  (_expr~("," ~ _expr)*)?~ right_column }
 
 if_expr = {literal_if~condition~anyblock~elseblock?}
 
@@ -340,8 +298,6 @@ conditionbody_recover = {!right_column}
 elseblock = {"else"~anyblock}
 loop_expr = {"loop"~anyblock}
 while_expr = {"while"~condition~anyblock}
-
-assignment_expr ={ _exprx~equal~_expr }
 
 borrow_expr = {"&"~"mut"?~_expr}
 
@@ -407,7 +363,7 @@ specblock_stmt = {variable_stmt | localvariable_stmt | globalvariable_stmt
                               | emits_stmt
                               | aggregatepredicate_stmt
                               | _stmt}
-specblockfinishing_expr = {spec_expr | aggregate_expr | _expr}
+specblockfinishing_expr = {spec_expr | aggregate_expr | _exprx}
 
 _definefunction_spec_def = {"spec" ~_definefunction_sig_ ~specblock}
 nat_definefunction_spec_def = {"spec"~_definefunction_sig_~";" }
@@ -430,7 +386,7 @@ assertspec_expr = {"assert"~predicate}
 
 abortsif_stmt = {abortsifspec_expr~";"}
 abortsifspec_expr = {"aborts_if"~predicate~with_expr? }
-with_expr = {"with"~_expr}
+with_expr = {"with"~_exprx}
 
 succeedsif_stmt = {succeedsifspec_expr~";"}
 succeedsifspec_expr = {"succeeds_if"~predicate}
@@ -463,9 +419,9 @@ apply_stmt = {"apply"~apply_schema_name~"to"~((function_pattern~",")*~function_p
 
 apply_schema_name ={ qual_path~("{"~ ((apply_schema_name_attribute~",")*~apply_schema_name_attribute)?~ "}")?}
 
-apply_schema_name_attribute = {ident~":"~_expr}
+apply_schema_name_attribute = {ident~":"~_exprx}
 
-predicate = {spec_visibility?~(aggregate_expr | _expr )}
+predicate = {spec_visibility?~(aggregate_expr | _exprx )}
 aggregatepredicate_stmt = {aggregate_expr~";"}
 aggregate_expr = {quant_expr~(":"~ _expr)?}
 

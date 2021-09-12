@@ -16,21 +16,7 @@ pub fn gen_parser() {
     };
 
     let mut file = File::create(rs).unwrap();
-// TODO left recursive
-    let test = "use pest::prec_climber::{Assoc, PrecClimber, Operator};
-
-
-lazy_static! {
-    static ref PREC_CLIMBER: PrecClimber<Rule> = build_precedence_climber();
-}
-fn build_precedence_climber() -> PrecClimber<Rule> {
-    PrecClimber::new(vec![
-        Operator::new(Rule::_exprx,  Assoc::Left),
-        Operator::new(Rule::mul_expr_item, Assoc::Left),
-        Operator::new(Rule::add_expr_item, Assoc::Left)
-    ])
-}";
-    let out = format!("pub struct MoveParser;{}\n{}",test, derived);
+    let out = format!("pub struct MoveParser;\n{}", derived);
 
     writeln!(file, "{}", out).unwrap();
 }
