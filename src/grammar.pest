@@ -161,9 +161,7 @@ type_ = {reftype | qual_pathtype | tupletype | lambdatype | ident}
 reftype = {reftypestart~type_}
 reftypestart = {"&"~"mut"?}
 qual_pathtype = {qual_path}
-
-tupletype = {left_column~(type_~("," | &right_column))*~right_column}
-
+tupletype = {left_column~(type_~("," ~type_))*~right_column}
 lambdatype = {"|"~((type_~",") *~type_)?~"|"~type_ }
 typeparameterlist = {"<"~typeparameter_with_recover*~">"}
 typeparameter_with_recover = {!">"~typeparameter~("," | &">")}
@@ -171,8 +169,6 @@ typeparameter_recover = {!(">" | left_column | "{" | ident)}
 typeparameter = {ident~typeparambound?}
 typeparambound = {":"~typeparambound_items}
 typeparambound_items = {ability~( "+"~ability )*}
-typeparambound_items_recover = {!(">" | ",")}
-
 typeargumentlist = {"<"~(type_ ~",") *~(type_ )? ~">"}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -216,9 +212,7 @@ inlineblock = {_expr}
 codeblock_expr = {codeblock}
 codeblock = {"{"~codeblockitems~ "}"}
 
-
 codeblockitems = {import_stmt*~(_stmt | blockspec_stmt)*~_expr?}
-codeblockitems_recover = {!"}"}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 /// Expressions

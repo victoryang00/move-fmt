@@ -104,8 +104,6 @@ impl Settings {
         }
         return Ok(GrammarRule { is_comment: false, module_decl, transaction_script, code, lines: (start, end) });
     }
-
-
     fn format_module_decl(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         self.current_indent += self.indent;
@@ -265,10 +263,675 @@ impl Settings {
 
         Ok(code)
     }
-
-    fn format_move_script(&self, pairs: Pair<Rule>) -> PestResult<String> {
-        move_unimplemented!()
+    fn format_move_script(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::script_def => match self.format_script_def(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                Rule::address_def => match self.format_address_def(pair) {
+                    Ok(exp) => code.push_str(&*exp),
+                    Err(e) => return Err(e),
+                },
+                Rule::module_def => match self.format_module_def(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::stmtx => match self.format_stmtx(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
     }
+    fn format_script_def(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        code.push_str("script {\n");
+        code.push_str(" ".repeat(self.current_indent).as_str());
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::import_stmt => match self.format_import_stmt(pair) {
+                    Ok(import_stm_) => code.push_str(&*import_stm_),
+                    Err(e) => return Err(e),
+                },
+                Rule::const_def => match self.format_const_def(pair) {
+                    Ok(const_def_) => code.push_str(&*const_def_),
+                    Err(e) => return Err(e),
+                },
+                Rule::function_def => match self.format_function_def(pair) {
+                    Ok(function_def_) =>
+                        code.push_str(&*function_def_),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        code.push_str("\n");
+        code.push_str(" ".repeat(self.current_indent).as_str());
+        code.push_str("}");
+        Ok(code)
+    }
+    fn format_function_def(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::function_sig_withoptionalvisibility => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_withoptionalvisibility_) => code.push_str(&*function_sig_withoptionalvisibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::codeblock => match self.format_codeblock(pair) {
+                    Ok(codeblock) => code.push_str(&*codeblock),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    fn format_codeblock(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        code.push_str("{ ");
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::codeblockitems => match self.format_codeblock(pair) {
+                    Ok(typeannotation) => code.push_str(&*typeannotation),
+                    Err(e) => return Err(e),
+                },
+                Rule::import_stmt => match self.format_import_stmt(pair) {
+                    Ok(cmd_) => code.push_str(&*cmd_),
+                    Err(e) => return Err(e),
+                },
+                Rule::_stmt => match self.format_stmt_(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                Rule::_expr => match self.format_expr_(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        code.push_str("}");
+
+        Ok(code)
+    }
+    fn format_expr_(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        let mut plus_count = 0;
+        let mut count = 0;
+
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::typeparambound => {
+                    code.push_str(":");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::typeparambound_items => {
+                    plus_count = pair.as_str().matches("+").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::ability => {
+                    if pair.as_str().starts_with("copy") {
+                        code.push_str("copy ");
+                    }
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    if plus_count > 0 {
+                        code.push_str(" + ");
+                        plus_count -= 1;
+                    }
+                }
+                Rule::typeparameter_with_recover => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::typeparameterlist => {
+                    code.push_str("<");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str(">");
+                }
+                Rule::function_sig_visibility => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::function_sig_ => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => {
+                        code.push_str("fun ");
+                        code.push_str(&*function_sig_visibility_)
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::function_parameterlist => {
+                    count = pair.as_str().matches(",").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::function_parameter => {
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(", ");
+                        count -= 1;
+                    }
+                }
+                Rule::typeannotation => match self.format_typeannotation(pair) {
+                    Ok(typeannotation) => code.push_str(&*typeannotation),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    //TODO
+    fn format_stmt_(&mut self, pairs: Pair<Rule>) -> PestResult<String> {//TODO
+        let mut code = String::new();
+        let mut plus_count = 0;
+        let mut count = 0;
+
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::typeparambound => {
+                    code.push_str(":");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::typeparambound_items => {
+                    plus_count = pair.as_str().matches("+").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::ability => {
+                    code.push_str("copy ");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    if plus_count > 0 {
+                        code.push_str(" + ");
+                        plus_count -= 1;
+                    }
+                }
+                Rule::typeparameter_with_recover => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::typeparameterlist => {
+                    code.push_str("<");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str(">");
+                }
+                Rule::function_sig_visibility => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::function_sig_ => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => {
+                        code.push_str("fun ");
+                        code.push_str(&*function_sig_visibility_)
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::function_parameterlist => {
+                    count = pair.as_str().matches(",").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::function_parameter => {
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(", ");
+                        count -= 1;
+                    }
+                }
+                Rule::typeannotation => match self.format_typeannotation(pair) {
+                    Ok(typeannotation) => code.push_str(&*typeannotation),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    //TODO
+    fn format_function_sig_withoptionalvisibility(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        let mut plus_count = 0;
+        let mut count = 0;
+
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::typeparambound => {
+                    code.push_str(":");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::typeparambound_items => {
+                    plus_count = pair.as_str().matches("+").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::ability => {
+                    code.push_str("copy ");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    if plus_count > 0 {
+                        code.push_str(" + ");
+                        plus_count -= 1;
+                    }
+                }
+                Rule::typeparameter_with_recover => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::typeparameterlist => {
+                    code.push_str("<");
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str(">");
+                }
+                Rule::function_sig_visibility => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
+                    Err(e) => return Err(e),
+                },
+                Rule::function_sig_ => match self.format_function_sig_withoptionalvisibility(pair) {
+                    Ok(function_sig_visibility_) => {
+                        code.push_str("fun ");
+                        code.push_str(&*function_sig_visibility_)
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::function_parameterlist => {
+                    count = pair.as_str().matches(",").count();
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::function_parameter => {
+                    match self.format_function_sig_withoptionalvisibility(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(", ");
+                        count -= 1;
+                    }
+                }
+                Rule::typeannotation => match self.format_typeannotation(pair) {
+                    Ok(typeannotation) => code.push_str(&*typeannotation),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    fn format_const_def(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        code.push_str("const ");
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::equal => {
+                    code.push_str(&*" ".repeat(self.set_space));
+                    code.push_str(pair.as_str());
+                    code.push_str(&*" ".repeat(self.set_space));
+                }
+                Rule::typeannotation => match self.format_typeannotation(pair) {
+                    Ok(typeannotation) => code.push_str(&*typeannotation),
+                    Err(e) => return Err(e),
+                },
+                Rule::cmd => match self.format_cmd(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                        code.push_str(";");
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::_expr => match self.format_expr_(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        code.push_str(";");
+        Ok(code)
+    }
+    fn format_typeannotation(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        let mut count = 0;
+
+        code.push_str(": ");
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::left_column => code.push_str(pair.as_str()),
+                Rule::right_column => code.push_str(pair.as_str()),
+                Rule::type_ => {
+                    match self.format_typeannotation(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(", ");
+                        count -= 1;
+                    }
+                }
+                Rule::reftype => {
+                    code.push_str("& ");
+                    if pair.as_str().contains("mut") {
+                        code.push_str("mut ");
+                    }
+                    match self.format_typeannotation(pair) {
+                        Ok(exp) => code.push_str(&*exp),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::lambdatype => {
+                    code.push_str("|");
+                    count += pair.as_str().matches(",").count();
+                    match self.format_typeannotation(pair) {
+                        Ok(exp) => code.push_str(&*exp),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str("|");
+                }
+                Rule::tupletype => {
+                    count += pair.as_str().matches(",").count();
+                    match self.format_typeannotation(pair) {
+                        Ok(exp) => code.push_str(&*exp),
+                        Err(e) => return Err(e),
+                    }
+                }
+                Rule::qual_pathtype => match self.format_typeannotation(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                    }
+                    Err(e) => return Err(e),
+                }
+                Rule::fullyqualifiedmoduleref => code.push_str(
+                    pair.as_str().chars().into_iter().filter(|c| !c.is_whitespace()).collect::<String>().as_str()
+                ),
+
+                Rule::moduleref => {
+                    match self.format_typeannotation(pair) {
+                        Ok(cmd_) => {
+                            code.push_str(&*cmd_);
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str("::");
+                }
+                Rule::qual_path => match self.format_typeannotation(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::typeargumentlist => {
+                    code.push_str("<");
+                    count += pair.as_str().matches(",").count();
+                    match self.format_typeannotation(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str(">");
+                }
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    fn format_import_stmt(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        code.push_str("use ");
+        let mut count = 0;
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::module_items_import => match self.format_import_stmt(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                Rule::fullyqualifiedmoduleref => {
+                    match self.format_import_stmt(pair) {
+                        Ok(exp) => code.push_str(&*exp),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str("::");
+                }
+                Rule::item_import => {
+                    match self.format_import_stmt(pair) {
+                        Ok(cmd_) => {
+                            code.push_str(&*cmd_);
+                            code.push_str(";");
+                        }
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(",");
+                        count -= 1;
+                    }
+                }
+                Rule::multi_item_import => {
+                    count = pair.as_str().matches(",").count();
+                    code.push_str("{");
+                    match self.format_import_stmt(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str("}");
+                }
+                Rule::importalias => {
+                    code.push_str("as ");
+                    match self.format_import_stmt(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                }
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    // TODO
+    fn format_address_def(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::stmt => match self.format_stmt(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                Rule::exp => match self.format_exp(pair) {
+                    Ok(exp) => code.push_str(&*exp),
+                    Err(e) => return Err(e),
+                },
+                Rule::cmd => match self.format_cmd(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                        code.push_str(";");
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::stmtx => match self.format_stmtx(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    // TODO
+    fn format_module_def(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        code.push_str("module ");
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::ident => code.push_str(pair.as_str()),
+                Rule::moduleitem_item => {
+                    code.push_str("{");
+                    match self.format_moduleitem_item(pair) {
+                        Ok(stmt) => code.push_str(&*stmt),
+                        Err(e) => return Err(e),
+                    }
+                    code.push_str("}");
+                }
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    // TODO
+    fn format_moduleitem_item(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::WHITESPACE => continue,
+                Rule::COMMENT => match self.format_comment(pair) {
+                    Ok(comment) => code.push_str(&*comment),
+                    Err(e) => return Err(e),
+                },
+                Rule::import_stmt => match self.format_import_stmt(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                Rule::exp => match self.format_exp(pair) {
+                    Ok(exp) => code.push_str(&*exp),
+                    Err(e) => return Err(e),
+                },
+                Rule::cmd => match self.format_cmd(pair) {
+                    Ok(cmd_) => {
+                        code.push_str(&*cmd_);
+                        code.push_str(";");
+                    }
+                    Err(e) => return Err(e),
+                },
+                Rule::stmtx => match self.format_stmtx(pair) {
+                    Ok(stmt) => code.push_str(&*stmt),
+                    Err(e) => return Err(e),
+                },
+                _ => return Err(Unreachable(unreachable_rule!())),
+            };
+        }
+        Ok(code)
+    }
+    //TODO
     fn format_stmtx(&mut self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         for pair in pairs.into_inner() {
@@ -280,22 +943,22 @@ impl Settings {
                 },
                 Rule::stmt => match self.format_stmt(pair) {
                     Ok(stmt) => code.push_str(&*stmt),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::exp => match self.format_exp(pair) {
                     Ok(exp) => code.push_str(&*exp),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::cmd => match self.format_cmd(pair) {
                     Ok(cmd_) => {
                         code.push_str(&*cmd_);
                         code.push_str(";");
                     }
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::stmtx => match self.format_stmtx(pair) {
                     Ok(stmt) => code.push_str(&*stmt),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
@@ -338,7 +1001,7 @@ impl Settings {
                             code.push_str(" ".repeat(self.current_indent).as_str());
                             code.push_str("}");
                         }
-                        Err(_) => {}
+                        Err(e) => return Err(e),
                     }
                 }
                 Rule::left_column => code.push_str(pair.as_str()),
@@ -350,13 +1013,13 @@ impl Settings {
                         code.push_str(";");
                         self.current_indent -= self.indent;
                     }
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::exp => match self.format_exp(pair) {
                     Ok(exp_) => {
                         code.push_str(&*exp_);
                     }
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 _ => return Err(Unreachable(unreachable_rule!())),
             };
@@ -376,11 +1039,11 @@ impl Settings {
                 Rule::value => code.push_str(pair.as_str()),
                 Rule::expx => match self.format_exp(pair) {
                     Ok(exp) => code.push_str(&*exp),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::exp => match self.format_exp(pair) {
                     Ok(exp) => code.push_str(&*exp),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::left_column => code.push_str(pair.as_str()),
                 Rule::right_column => code.push_str(pair.as_str()),
@@ -392,7 +1055,7 @@ impl Settings {
                 }
                 Rule::value_operator => match self.format_value_operator(pair) {
                     Ok(vop) => code.push_str(&*vop),
-                    Err(_) => {}
+                    Err(e) => return Err(e),
                 },
                 Rule::binary_exp => {
                     code.push_str(" ");
@@ -404,7 +1067,6 @@ impl Settings {
         }
         Ok(code)
     }
-
     fn format_value_operator(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         let raw = pairs.as_str();
@@ -435,7 +1097,6 @@ impl Settings {
         }
         Ok(code)
     }
-
     fn format_tau_list(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         let raw = pairs.as_str();
@@ -457,7 +1118,6 @@ impl Settings {
         }
         Ok(code)
     }
-
     fn format_cmd(&self, pairs: Pair<Rule>) -> PestResult<String> {
         let mut code = String::new();
         let raw = pairs.as_str();
@@ -501,7 +1161,7 @@ impl Settings {
                     }
                 }
                 Rule::exp => {
-                    match self.format_exp(pair){
+                    match self.format_exp(pair) {
                         Ok(comment) => code.push_str(&*comment),
                         Err(e) => return Err(e),
                     }
