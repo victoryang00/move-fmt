@@ -192,10 +192,7 @@ binding_pat = {ident}
 tuple_pat = {left_column ~((_pat~",") *~_pat)? ~right_column}
 
 struct_pat ={ qual_path~struct_patfieldsblock }
-struct_patfieldsblock = {"{"~struct_patfield_with_recover*~"}" }
-
-struct_patfield_with_recover = {!"}"~struct_patfield~("," | "}")}
-struct_patfield_recover = {!("}" | ident)}
+struct_patfieldsblock = {"{"~struct_patfield*~"}" }
 struct_patfield = {ident~struct_patfieldbinding? }
 struct_patfieldbinding ={ ":"~_pat }
 
@@ -232,7 +229,7 @@ unary_expr = {copy_expr | move_expr | deref_expr | bang_expr
 atom_expr ={ annotated_expr
                     | tupleliteral_expr
                     | parens_expr
-                    | structliteral__expr
+                    | structliteral_expr
                     | dot_expr
                     | index_expr
                     | call_expr
@@ -245,7 +242,7 @@ atom_expr ={ annotated_expr
 annotatedexpprefix = {left_column~_expr~":"}
 annotated_expr = {annotatedexpprefix~type_~right_column }
 
-bang_expr = {"!" ~_expr}
+bang_expr = {"!" ~ _expr}
 deref_expr = {"*"~ _expr}
 
 copy_expr = {"copy" ~_expr}
@@ -257,13 +254,9 @@ abort_expr = {"abort"~_expr}
 break_expr = {"break"}
 continue_expr = {"continue"}
 
-structliteral__expr = {qual_path~structliteral_fieldsblock}
+structliteral_expr = {qual_path~structliteral_fieldsblock}
 
-structliteral_fieldsblock = {"{"~structliteral_field_with_recover*~"}" }
-
-structliteral_field_with_recover = {!"}"~structliteral_field~("," | &"}")}
-
-structliteral_field_recover ={ !("}" | ident)}
+structliteral_fieldsblock = {"{"~structliteral_field*~"}" }
 
 structliteral_field = {ident~structliteral_fieldassignment?}
 
@@ -287,7 +280,6 @@ if_expr = {literal_if~condition~anyblock~elseblock?}
 
 condition = {left_column~conditionbody~right_column}
 conditionbody = {_expr}
-conditionbody_recover = {!right_column}
 
 elseblock = {"else"~anyblock}
 loop_expr = {"loop"~anyblock}
@@ -335,10 +327,8 @@ nat_definefunction_ = {_definefunction_sig_~";"}
 
 blockspec_stmt = {"spec"~specblock~";" }
 
-specblock = {"{"~specblock_stmt_with_recover*~specblockfinishing_expr_with_recover?~"}"}
-specblock_stmt_with_recover = { !("}" | EOI) ~ specblock_stmt }
-specblockfinishing_expr_with_recover = {!("}" |EOI) ~specblockfinishing_expr}
-specblock_stmt = {variable_stmt | localvariable_stmt | globalvariable_stmt
+specblock = {"{"~specblock_stmt*~specblockfinishing_expr?~"}"}
+specblock_stmt = {variable_stmt | localvariable_stmt | globalvariable_stmt //TODO
                               | import_stmt
                               | nat_function_def
                               | _definefunction_ | _definefunction_spec_def
