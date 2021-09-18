@@ -32,6 +32,24 @@ macro_rules! unreachable_rule {
         let name = type_name_of(f);
         format!("Unreachable Rule: {} at line {}", &name[..name.len() - 3], line!())
     }};
+    ($val:expr $(,)?) => {
+        match $val {
+            tmp => {
+                dbg!($val.as_str());
+                dbg!($val.as_rule());
+
+                fn f() {}
+                fn type_name_of<T>(_: T) -> &'static str {
+                    std::any::type_name::<T>()
+                }
+                let name = type_name_of(f);
+                format!("Unreachable Rule: {} at line {}", &name[..name.len() - 3], line!())
+    }
+      }
+    };
+    ($($val:expr),+ $(,)?) => {
+        ($(dbg!($val)),+,)
+    };
 }
 
 #[macro_export]

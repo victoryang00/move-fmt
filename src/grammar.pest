@@ -154,12 +154,11 @@ importalias = {"as"~ ident}
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 //// types
 /////////////////////////////////////////////////////////////////////////////////////////////////////
-typeannotation = {":"~type_}
-
+typeannotation = {literal_mao~type_}
+literal_mao = {":"}
 type_ = {reftype | qual_pathtype | tupletype | lambdatype | ident}
 
-reftype = {reftypestart~type_}
-reftypestart = {"&"~"mut"?}
+reftype = {"&"~"mut"?~type_}
 qual_pathtype = {qual_path}
 tupletype = {left_column~(type_~("," ~type_))*~right_column}
 lambdatype = {"|"~((type_~",") *~type_)?~"|"~type_ }
