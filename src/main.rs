@@ -1,9 +1,9 @@
-use move_fmt::Settings;
+use move_fmt::{PestResult, Settings};
 use std::{error::Error, fs};
 use toml::Value;
 use walkdir::WalkDir;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> PestResult<()> {
     let mut cfg = Settings::default();
     let mut exclude = vec![];
     if let Ok(string) = fs::read_to_string("rustfmt.toml") {
@@ -30,14 +30,19 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-    println!("Excluded: {:?}", exclude);
-    for entry in WalkDir::new(".").follow_links(true).into_iter().filter_map(|e| e.ok()) {
-        let f_name = entry.file_name().to_string_lossy();
-        if f_name.ends_with(".pest") {
-            println!("{}", f_name);
-        }
-    }
-    Ok(())
+    // println!("Excluded: {:?}", exclude);
+    // for entry in WalkDir::new(".").follow_links(true).into_iter().filter_map(|e| e.ok()) {
+    //     let f_name = entry.file_name().to_string_lossy();
+    //     if f_name.ends_with(".pest") {
+    //         println!("{}", f_name);
+    //     }
+    // }
+
+    let path = std::env::args()
+        .nth(1)
+        .expect("supply a single file as the formatter argument");
+
+    cfg.format_file(&*path, &*path)
 }
 
 fn toml_string_or_string_list(value: &Value) -> Vec<String> {
