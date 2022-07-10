@@ -1,3 +1,4 @@
+#![feature(fs_try_exists)]
 extern crate move_fmt;
 
 use move_fmt::{PestResult, Settings, grammar::{Rule, MoveParser}};

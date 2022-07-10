@@ -1,4 +1,3 @@
-#![feature(fs_try_exists)]
 extern crate pest;
 #[cfg(test)]
 extern crate pest_generator;
