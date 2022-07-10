@@ -4,7 +4,7 @@ use crate::{
     utils::GrammarRule,
     PestError, PestResult, Settings,
 };
-use pest::{iterators::Pair, Parser};
+use pest::{iterators::Pair, Parser, ParseResult};
 use std::{
     fs::{read_to_string, File},
     io::Write,
@@ -384,7 +384,7 @@ impl Settings {
                         Ok(function_sig_withoptionalvisibility_) => code.push_str(&*function_sig_withoptionalvisibility_),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::codeblock => match self.format_codeblock(pair) {
                     Ok(codeblock) => code.push_str(&*codeblock),
                     Err(e) => return Err(e),
@@ -809,12 +809,11 @@ impl Settings {
                     code.push_str(">");
                 }
                 Rule::function_sig_visibility => {
-
                     match self.format_function_sig_withoptionalvisibility(pair) {
                         Ok(function_sig_visibility_) => code.push_str(&*function_sig_visibility_),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::function_sig_ => match self.format_function_sig_withoptionalvisibility(pair) {
                     Ok(function_sig_visibility_) => {
                         code.push_str("fun ");
@@ -1598,7 +1597,7 @@ impl Settings {
                             code.push_str(&*function_def_),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::struct_sig_ => {
                     code.push_str("\n");
                     code.push_str(" ".repeat(self.current_indent).as_str());
@@ -1689,7 +1688,7 @@ impl Settings {
                         Ok(stmt) => code.push_str(&*stmt),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::modulespec_def => {
                     code.push_str("\n");
                     code.push_str(" ".repeat(self.current_indent).as_str());
@@ -1698,7 +1697,7 @@ impl Settings {
                         Ok(stmt) => code.push_str(&*stmt),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::schemaspec_def => {
                     code.push_str("\n");
                     code.push_str(" ".repeat(self.current_indent).as_str());
@@ -1707,7 +1706,7 @@ impl Settings {
                         Ok(stmt) => code.push_str(&*stmt),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 Rule::_definefunction_spec_def => {
                     code.push_str("\n");
                     code.push_str(" ".repeat(self.current_indent).as_str());
@@ -1725,7 +1724,7 @@ impl Settings {
                         Ok(stmt) => code.push_str(&*stmt),
                         Err(e) => return Err(e),
                     }
-                },
+                }
                 _ => return Err(Unreachable(unreachable_rule!(pair.clone()))),
             };
         }
@@ -1988,7 +1987,64 @@ impl Settings {
                     code.push_str(pair.as_str());
                     code.push_str(&*" ".repeat(self.set_space));
                 }
-                _ => return Err(Unreachable(unreachable_rule!(pair.clone()))),
+                Rule::call => {
+                    match self.format_call(pair) {
+                        Ok(call) => code.push_str(&*call),
+                        Err(e) => return Err(e),
+                    }
+                }
+                _ => {
+                    dbg!("{}",pair.as_rule());
+                    return Err(Unreachable(unreachable_rule!(pair.clone())));
+                }
+            };
+        }
+        Ok(code)
+    }
+
+    fn format_call(&self, pairs: Pair<Rule>) -> PestResult<String> {
+        let mut code = String::new();
+        let raw = pairs.as_str();
+        let mut count = 0;
+        for pair in pairs.into_inner() {
+            match pair.as_rule() {
+                Rule::module_operator => {
+                    for pair_module_operator in pair.into_inner() {
+                        code.push_str(pair_module_operator.as_str()); //"move_from"~"<"~struct_name~">"~left_column~exp~right_column|"borrow_global"~"<"~struct_name~">"~left_column~exp~right_column|"exist"~"<"~struct_name~">"~left_column~exp~right_column
+                    }
+                }
+                Rule::builtin => {
+                    for pair_builtin in pair.into_inner() {
+                        code.push_str(pair_builtin.as_str()); // builtin_start~left_column~exp~right_column
+                    }
+                }
+                Rule::module_alias => {
+                    code.push_str(pair.as_str());
+                }
+                Rule::procedure_name => {
+                    code.push_str(pair.as_str());
+                }
+                Rule::left_column => {
+                    code.push_str(pair.as_str());
+                    count = pair.as_str().matches(",").count();
+                }
+                Rule::exp => {
+                    match self.format_exp(pair) {
+                        Ok(comment) => code.push_str(&*comment),
+                        Err(e) => return Err(e),
+                    }
+                    if count > 0 {
+                        code.push_str(", ");
+                        count -= 1;
+                    }
+                }
+                Rule::right_column => {
+                    code.push_str(pair.as_str());
+                }
+                _ => {
+                    dbg!("{}",pair.as_rule());
+                    return Err(Unreachable(unreachable_rule!(pair.clone())));
+                }
             };
         }
         Ok(code)
